@@ -21,7 +21,8 @@ interface AndroidHandler {
     fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
     // TODO make all implement it
-    fun loadMedia() {}
+    fun loadInternalMedia() {}
+    fun loadExternalMedia() {}
 
     fun registerPermissions(componentActivity: ComponentActivity)
     fun requestPermissions()
@@ -49,7 +50,8 @@ enum class AndroidVersion {
 }
 
 enum class QueueExecution {
-    RETRIEVE_MEDIA
+    RETRIEVE_INTERNAL_MEDIA,
+    RETRIEVE_EXTERNAL_MEDIA,
 }
 
 class ConflatedEventBus<T : Any>(initialValue: T? = null) {

@@ -25,7 +25,7 @@ class MediasViewModel @Inject constructor(
         get() = _uiState
 
     init {
-        androidHandler.loadMedia()
+        androidHandler.loadInternalMedia()
 
         viewModelScope.launch {
             androidHandler.mediaList().collectLatest {
@@ -36,6 +36,14 @@ class MediasViewModel @Inject constructor(
 
     fun loadBitmapFor(media: Image): Bitmap {
         return androidHandler.loadThumbnailFor(media)
+    }
+
+    fun loadInternalMedia() {
+        androidHandler.loadInternalMedia()
+    }
+
+    fun loadExternalMedia() {
+        androidHandler.loadExternalMedia()
     }
 }
 

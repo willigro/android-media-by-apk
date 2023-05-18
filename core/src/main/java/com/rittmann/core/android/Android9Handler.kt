@@ -3,8 +3,10 @@ package com.rittmann.core.android
 import android.Manifest
 import android.content.ContentUris
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -14,18 +16,41 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.rittmann.core.R
 import com.rittmann.core.data.Image
 import com.rittmann.core.extensions.arePermissionsGranted
 import com.rittmann.core.extensions.arePermissionsGrated
 import com.rittmann.core.tracker.track
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+
 
 class Android9Handler(private val context: Context) : AndroidHandler {
 
     init {
         track()
+
+        // TODO: mocking, remove me later
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                track(
+                    "mocking bitmap=${
+                        saveToInternalStorage(
+                            BitmapFactory.decodeResource(context.resources, R.drawable.tilemap)
+                        )
+                    }"
+                )
+            } else {
+                track("Cannot mock bitmap")
+            }
+        } catch (e: IOException) {
+            track(e)
+            e.printStackTrace()
+        }
     }
 
     companion object {
@@ -33,6 +58,8 @@ class Android9Handler(private val context: Context) : AndroidHandler {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
         )
+
+        const val INTERNAL_DIRECTORY = "imageDir"
     }
 
     private var activityResultLauncherPermissions: ActivityResultLauncher<Array<String>>? = null
@@ -42,14 +69,47 @@ class Android9Handler(private val context: Context) : AndroidHandler {
 
     private val _mediaUris: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
 
-    private val imageList = mutableListOf<Image>()
-
     override val permissionIsDenied: ConflatedEventBus<Boolean> = ConflatedEventBus()
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
-    override fun loadMedia() {
-        if (checkPermissionsAndScheduleExecutionCaseNeeded().not()) {
+    override fun loadInternalMedia() {
+        queueExecution.clear()
+
+        if (checkPermissionsAndScheduleExecutionCaseNeeded(
+                QueueExecution.RETRIEVE_INTERNAL_MEDIA
+            ).not()
+        ) {
+            return
+        }
+
+        val cw = ContextWrapper(context)
+
+        val directory: File = cw.getDir(INTERNAL_DIRECTORY, Context.MODE_PRIVATE)
+        val files = directory.listFiles()
+
+        val imageList = mutableListOf<Image>()
+
+        val result = files?.filter { file ->
+            file.canRead()
+        }?.map { file ->
+//            val imageBytes = it.readBytes()
+//            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            imageList += Image(uri = Uri.fromFile(file), name = file.name, id = null)
+        } ?: listOf()
+
+        _mediaUris.value = imageList
+
+        track(result)
+    }
+
+    override fun loadExternalMedia() {
+        queueExecution.clear()
+
+        if (checkPermissionsAndScheduleExecutionCaseNeeded(
+                QueueExecution.RETRIEVE_EXTERNAL_MEDIA
+            ).not()
+        ) {
             return
         }
 
@@ -73,6 +133,8 @@ class Android9Handler(private val context: Context) : AndroidHandler {
             sortOrder
         )
 
+        val imageList = mutableListOf<Image>()
+
         query?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val nameColumn =
@@ -83,7 +145,7 @@ class Android9Handler(private val context: Context) : AndroidHandler {
                 val name = cursor.getString(nameColumn)
 
                 val contentUri: Uri = ContentUris.withAppendedId(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    collection,
                     id
                 )
 
@@ -95,6 +157,32 @@ class Android9Handler(private val context: Context) : AndroidHandler {
 
         _mediaUris.value = imageList
         track(imageList)
+    }
+
+    private fun saveToInternalStorage(bitmapImage: Bitmap): String? {
+        val cw = ContextWrapper(context)
+
+        val directory: File = cw.getDir(INTERNAL_DIRECTORY, Context.MODE_PRIVATE)
+
+        val myPath = File(directory, "profile.jpg")
+
+        var fos: FileOutputStream? = null
+        try {
+            fos = FileOutputStream(myPath)
+
+            bitmapImage.compress(Bitmap.CompressFormat.JPEG, 100, fos)
+        } catch (e: Exception) {
+            track(e)
+            e.printStackTrace()
+        } finally {
+            try {
+                fos!!.close()
+            } catch (e: IOException) {
+                track(e)
+                e.printStackTrace()
+            }
+        }
+        return directory.absolutePath
     }
 
     override fun registerPermissions(componentActivity: ComponentActivity) {
@@ -113,6 +201,10 @@ class Android9Handler(private val context: Context) : AndroidHandler {
     override fun mediaList(): StateFlow<List<Image>> = _mediaUris
 
     override fun loadThumbnailFor(media: Image): Bitmap {
+        if (media.id == null) {
+            return loadBitmapFor(media)
+        }
+
         return MediaStore.Images.Thumbnails.getThumbnail(
             context.contentResolver,
             media.id,
@@ -128,15 +220,17 @@ class Android9Handler(private val context: Context) : AndroidHandler {
         )
     }
 
-    private fun checkPermissionsAndScheduleExecutionCaseNeeded(): Boolean {
+    private fun checkPermissionsAndScheduleExecutionCaseNeeded(
+        execution: QueueExecution,
+    ): Boolean {
         val hasPermission = PERMISSIONS_STORAGE.arePermissionsGrated(context)
 
         if (hasPermission.not()) {
             requestPermissionsLiveData.value = Unit
-            queueExecution.add(QueueExecution.RETRIEVE_MEDIA)
+            queueExecution.add(execution)
         }
 
-        track("hasPermission=$hasPermission")
+        track("hasPermission=$hasPermission, execution=$execution")
 
         return hasPermission
     }
@@ -189,9 +283,10 @@ class Android9Handler(private val context: Context) : AndroidHandler {
     }
 
     private fun executeNextOnQueue() {
-        track()
+        track(queueExecution)
         when (queueExecution.remove()) {
-            QueueExecution.RETRIEVE_MEDIA -> loadMedia()
+            QueueExecution.RETRIEVE_INTERNAL_MEDIA -> loadInternalMedia()
+            QueueExecution.RETRIEVE_EXTERNAL_MEDIA -> loadExternalMedia()
             else -> {}
         }
     }
