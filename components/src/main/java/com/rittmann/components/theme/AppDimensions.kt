@@ -17,15 +17,16 @@ data class AppDimensions(
     val paddingTopBetweenComponentsMedium: Dp = 12.dp,
     val paddingTopBetweenComponentsLarge: Dp = 22.dp,
 
-    val progressAppendingItems: Dp = 16.dp,
-
     // Size
     val progressSize: Dp = 100.dp,
-    val iconSizeSmall: Dp = 50.dp,
-    val iconSizeLarge: Dp = 150.dp,
     val divisor: Dp = 1.dp,
 
-    val dialogDimens: DialogDimens = DialogDimens()
+    val dialogDimens: DialogDimens = DialogDimens(),
+    val mediaDimens: MediaDimens = MediaDimens(),
+)
+
+class MediaDimens(
+    val thumbnailHeight: Dp = 200.dp
 )
 
 class DialogDimens(

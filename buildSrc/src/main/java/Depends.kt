@@ -99,8 +99,8 @@ object Depends {
         }
     }
 
-    object Glide {
-        fun DependencyHandler.implementGlide() {
+    object Coil {
+        fun DependencyHandler.implementCoil() {
             implement("io.coil-kt:coil-compose:2.0.0")
         }
     }

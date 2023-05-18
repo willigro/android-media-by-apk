@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -18,21 +19,14 @@ import com.rittmann.core.extensions.arePermissionsGranted
 import com.rittmann.core.extensions.arePermissionsGrated
 import com.rittmann.core.tracker.track
 import java.util.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class Android9Handler(private val context: Context) : AndroidHandler {
 
     init {
         track()
     }
-
-    private var activityResultLauncherPermissions: ActivityResultLauncher<Array<String>>? = null
-    private var activityResultLauncherSettings: ActivityResultLauncher<Intent>? = null
-    private val requestPermissionsLiveData: MutableLiveData<Unit> = MutableLiveData()
-    private val queueExecution: Queue<QueueExecution> = LinkedList()
-
-    override val permissionIsDenied: ConflatedEventBus<Boolean> = ConflatedEventBus()
-
-    override fun permissionObserver(): LiveData<Unit> = requestPermissionsLiveData
 
     companion object {
         private val PERMISSIONS_STORAGE = mutableListOf(
@@ -41,14 +35,23 @@ class Android9Handler(private val context: Context) : AndroidHandler {
         )
     }
 
+    private var activityResultLauncherPermissions: ActivityResultLauncher<Array<String>>? = null
+    private var activityResultLauncherSettings: ActivityResultLauncher<Intent>? = null
+    private val requestPermissionsLiveData: MutableLiveData<Unit> = MutableLiveData()
+    private val queueExecution: Queue<QueueExecution> = LinkedList()
+
+    private val _mediaUris: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
+
+    private val imageList = mutableListOf<Image>()
+
+    override val permissionIsDenied: ConflatedEventBus<Boolean> = ConflatedEventBus()
+
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
-    override fun retrieveMedia() {
+    override fun loadMedia() {
         if (checkPermissionsAndScheduleExecutionCaseNeeded().not()) {
             return
         }
-
-        val imageList = mutableListOf<Image>()
 
         val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
@@ -86,11 +89,43 @@ class Android9Handler(private val context: Context) : AndroidHandler {
 
                 // Stores column values and the contentUri in a local object
                 // that represents the media file.
-                imageList += Image(contentUri, name)
+                imageList += Image(uri = contentUri, name = name, id = id)
             }
         }
 
-        track(imageList.size)
+        _mediaUris.value = imageList
+        track(imageList)
+    }
+
+    override fun registerPermissions(componentActivity: ComponentActivity) {
+        registerLauncherPermissions(componentActivity)
+        registerLauncherSettings(componentActivity)
+    }
+
+    override fun requestPermissions() {
+        activityResultLauncherPermissions?.launch(
+            PERMISSIONS_STORAGE.toTypedArray()
+        )
+    }
+
+    override fun permissionObserver(): LiveData<Unit> = requestPermissionsLiveData
+
+    override fun mediaList(): StateFlow<List<Image>> = _mediaUris
+
+    override fun loadThumbnailFor(media: Image): Bitmap {
+        return MediaStore.Images.Thumbnails.getThumbnail(
+            context.contentResolver,
+            media.id,
+            MediaStore.Images.Thumbnails.MINI_KIND,
+            null,
+        )
+    }
+
+    override fun loadBitmapFor(media: Image): Bitmap {
+        return MediaStore.Images.Media.getBitmap(
+            context.contentResolver,
+            media.uri,
+        )
     }
 
     private fun checkPermissionsAndScheduleExecutionCaseNeeded(): Boolean {
@@ -104,17 +139,6 @@ class Android9Handler(private val context: Context) : AndroidHandler {
         track("hasPermission=$hasPermission")
 
         return hasPermission
-    }
-
-    override fun registerPermissions(componentActivity: ComponentActivity) {
-        registerLauncherPermissions(componentActivity)
-        registerLauncherSettings(componentActivity)
-    }
-
-    override fun requestPermissions() {
-        activityResultLauncherPermissions?.launch(
-            PERMISSIONS_STORAGE.toTypedArray()
-        )
     }
 
     private fun registerLauncherSettings(componentActivity: ComponentActivity) {
@@ -167,7 +191,7 @@ class Android9Handler(private val context: Context) : AndroidHandler {
     private fun executeNextOnQueue() {
         track()
         when (queueExecution.remove()) {
-            QueueExecution.RETRIEVE_MEDIA -> retrieveMedia()
+            QueueExecution.RETRIEVE_MEDIA -> loadMedia()
             else -> {}
         }
     }

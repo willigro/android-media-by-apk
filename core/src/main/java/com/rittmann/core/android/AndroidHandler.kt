@@ -1,13 +1,18 @@
 package com.rittmann.core.android
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.LiveData
+import com.rittmann.core.data.Image
 import com.rittmann.core.tracker.track
 import java.util.LinkedList
 import java.util.Queue
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.mapNotNull
 
 
@@ -16,11 +21,14 @@ interface AndroidHandler {
     fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
     // TODO make all implement it
-    fun retrieveMedia() {}
+    fun loadMedia() {}
 
-    fun registerPermissions(componentActivity: ComponentActivity) {}
-    fun requestPermissions() {}
+    fun registerPermissions(componentActivity: ComponentActivity)
+    fun requestPermissions()
     fun permissionObserver(): LiveData<Unit>
+    fun mediaList(): StateFlow<List<Image>>
+    fun loadThumbnailFor(media: Image): Bitmap
+    fun loadBitmapFor(media: Image): Bitmap
 }
 
 object AndroidHandlerFactory {
