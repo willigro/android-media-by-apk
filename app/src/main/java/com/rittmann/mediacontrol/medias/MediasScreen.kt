@@ -8,6 +8,7 @@ import com.rittmann.components.ui.TextH1
 import com.rittmann.core.android.AndroidVersion
 
 
+
 @Composable
 fun MediasScreenRoot(
     navController: NavController,
@@ -21,4 +22,6 @@ fun MediasScreenRoot(
         AndroidVersion.ANDROID_11 -> TextH1(text = "Android 11")
         AndroidVersion.ANDROID_12 -> TextH1(text = "Android 12")
     }
+
+    uiState.androidHandler.retrieveMedia()
 }

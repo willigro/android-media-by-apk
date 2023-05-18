@@ -3,6 +3,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.rittmann.mediacontrol">
 
+    <!-- General -->
+
+    <!-- Android 9
+     needs these permissions to access any media file.
+     -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- Android 10 -->
+    <!-- Android 11 -->
+    <!-- Android 12 -->
+
     <application
         android:name=".AppApplication"
         android:allowBackup="true"

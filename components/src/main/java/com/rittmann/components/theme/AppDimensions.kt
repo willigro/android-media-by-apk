@@ -24,6 +24,13 @@ data class AppDimensions(
     val iconSizeSmall: Dp = 50.dp,
     val iconSizeLarge: Dp = 150.dp,
     val divisor: Dp = 1.dp,
+
+    val dialogDimens: DialogDimens = DialogDimens()
+)
+
+class DialogDimens(
+    val titleMinHeight: Dp = 60.dp,
+    val messageMinHeight: Dp = 100.dp,
 )
 
 internal val LocalDimensions = staticCompositionLocalOf { AppDimensions() }
