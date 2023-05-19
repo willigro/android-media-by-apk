@@ -1,3 +1,4 @@
+import Depends.CameraX.implementCameraX
 import Depends.Compose.implementCompose
 import Depends.Hilt.implementHilt
 import Depends.Core.implementCoreKtx
@@ -36,4 +37,7 @@ dependencies {
 
     // =========== ViewModel ==============
     implementViewModel()
+
+    // =========== CameraX ==============
+    implementCameraX()
 }

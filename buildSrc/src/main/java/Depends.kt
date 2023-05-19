@@ -65,7 +65,8 @@ object Depends {
 
     object Gradle {
         fun getGradlePlugin() = "com.android.tools.build:gradle:${Versions.GRADLE_TOOL_BUILD}"
-        fun getKotlinPlugin() =  "org.jetbrains.kotlin:kotlin-gradle-plugin:${Versions.KOTLIN_VERSION}"
+        fun getKotlinPlugin() =
+            "org.jetbrains.kotlin:kotlin-gradle-plugin:${Versions.KOTLIN_VERSION}"
     }
 
     object Core {
@@ -176,6 +177,16 @@ object Depends {
 
             androidTestImplement("androidx.compose.ui:ui-test-junit4:${Versions.COMPOSE}")
             testImplement("app.cash.turbine:turbine:0.9.0")
+        }
+    }
+
+    object CameraX {
+        fun DependencyHandler.implementCameraX() {
+            // CameraX
+            val cameraxVersion = "1.0.1"
+            implement( "androidx.camera:camera-camera2:$cameraxVersion")
+            implement( "androidx.camera:camera-lifecycle:$cameraxVersion")
+            implement( "androidx.camera:camera-view:1.0.0-alpha27")
         }
     }
 }

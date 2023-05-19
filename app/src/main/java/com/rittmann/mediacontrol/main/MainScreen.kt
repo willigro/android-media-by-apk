@@ -8,10 +8,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.rittmann.components.ui.alert.AlertComposeConfirm
 import com.rittmann.core.android.AndroidHandler
+import com.rittmann.core.android.PermissionStatusResult
 import com.rittmann.core.tracker.track
 import com.rittmann.mediacontrol.navigation.Navigation
 import com.rittmann.mediacontrol.medias.mediaGraph
-import kotlinx.coroutines.flow.consumeAsFlow
 
 
 private val dialogConfirm = AlertComposeConfirm()
@@ -40,19 +40,23 @@ fun NavigationGraph(
 
 @Composable
 fun RequestPermissionDeniedDialog(androidHandler: AndroidHandler) {
-    val permissionIsDenied = androidHandler.permissionIsDenied.flow.collectAsState(
-        initial = 0 to false
+    val permissionStatusResult = androidHandler.permissionStatusResult.flow.collectAsState(
+        initial = 0 to PermissionStatusResult()
     ).value
 
-    track(permissionIsDenied)
+    track(permissionStatusResult)
+
     dialogConfirm.PresentDialog()
 
-    if (permissionIsDenied.second == true) {
+    if (permissionStatusResult.second?.isDenied == true) {
+        val status = permissionStatusResult.second
         // TODO show when permission is denied but not blocked
         dialogConfirm.updateAndShow(
             title = "Title",
             message = "Message",
-            confirmCallback = androidHandler::requestPermissions,
+            confirmCallback = {
+                status?.let { androidHandler.requestPermissions(status) }
+            },
         )
     }
 }

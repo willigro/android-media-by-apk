@@ -1,3 +1,4 @@
+import Depends.CameraX.implementCameraX
 import Depends.Coil.implementCoil
 import Depends.Compose.implementCompose
 import Depends.Hilt.implementHilt
@@ -43,4 +44,7 @@ dependencies {
 
     // =========== Coil ==============
     implementCoil()
+
+    // =========== CameraX ==============
+    implementCameraX()
 }

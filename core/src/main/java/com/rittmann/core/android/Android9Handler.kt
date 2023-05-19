@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -14,71 +13,58 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import com.rittmann.core.R
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import com.rittmann.core.camera.CameraHandler
 import com.rittmann.core.data.Image
 import com.rittmann.core.extensions.arePermissionsGranted
 import com.rittmann.core.extensions.arePermissionsGrated
 import com.rittmann.core.tracker.track
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
+import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.ExecutorService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 
-class Android9Handler(private val context: Context) : AndroidHandler {
+class Android9Handler(
+    private val context: Context,
+    executorService: ExecutorService,
+) : AndroidHandler {
 
-    init {
-        track()
-
-        // TODO: mocking, remove me later
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                track(
-                    "mocking bitmap=${
-                        saveToInternalStorage(
-                            BitmapFactory.decodeResource(context.resources, R.drawable.tilemap)
-                        )
-                    }"
-                )
-            } else {
-                track("Cannot mock bitmap")
-            }
-        } catch (e: IOException) {
-            track(e)
-            e.printStackTrace()
-        }
-    }
+    private val cameraHandler: CameraHandler = CameraHandler(executorService)
 
     companion object {
         private val PERMISSIONS_STORAGE = mutableListOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
         )
+        private const val PERMISSIONS_CAMERA = Manifest.permission.CAMERA
 
         const val INTERNAL_DIRECTORY = "imageDir"
     }
 
     private var activityResultLauncherPermissions: ActivityResultLauncher<Array<String>>? = null
     private var activityResultLauncherSettings: ActivityResultLauncher<Intent>? = null
-    private val requestPermissionsLiveData: MutableLiveData<Unit> = MutableLiveData()
+    private var activityResultLauncherCameraPermission: ActivityResultLauncher<String>? = null
+
     private val queueExecution: Queue<QueueExecution> = LinkedList()
 
     private val _mediaUris: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
+    private val _cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
-    override val permissionIsDenied: ConflatedEventBus<Boolean> = ConflatedEventBus()
+    override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> =
+        ConflatedEventBus()
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
     override fun loadInternalMedia() {
         queueExecution.clear()
 
-        if (checkPermissionsAndScheduleExecutionCaseNeeded(
+        if (checkStoragePermissionsAndScheduleExecutionCaseNeeded(
                 QueueExecution.RETRIEVE_INTERNAL_MEDIA
-            ).not()
+            ).isDenied
         ) {
             return
         }
@@ -106,9 +92,9 @@ class Android9Handler(private val context: Context) : AndroidHandler {
     override fun loadExternalMedia() {
         queueExecution.clear()
 
-        if (checkPermissionsAndScheduleExecutionCaseNeeded(
+        if (checkStoragePermissionsAndScheduleExecutionCaseNeeded(
                 QueueExecution.RETRIEVE_EXTERNAL_MEDIA
-            ).not()
+            ).isDenied
         ) {
             return
         }
@@ -159,46 +145,38 @@ class Android9Handler(private val context: Context) : AndroidHandler {
         track(imageList)
     }
 
-    private fun saveToInternalStorage(bitmapImage: Bitmap): String? {
-        val cw = ContextWrapper(context)
+    override fun registerPermissions(componentActivity: ComponentActivity) {
+        registerLauncherStoragePermissions(componentActivity)
+        registerLauncherSettings(componentActivity)
+        registerLauncherCameraPermissions(componentActivity)
+    }
 
-        val directory: File = cw.getDir(INTERNAL_DIRECTORY, Context.MODE_PRIVATE)
-
-        val myPath = File(directory, "profile.jpg")
-
-        var fos: FileOutputStream? = null
-        try {
-            fos = FileOutputStream(myPath)
-
-            bitmapImage.compress(Bitmap.CompressFormat.JPEG, 100, fos)
-        } catch (e: Exception) {
-            track(e)
-            e.printStackTrace()
-        } finally {
-            try {
-                fos!!.close()
-            } catch (e: IOException) {
-                track(e)
-                e.printStackTrace()
+    override fun requestPermissions(permissionStatusResult: PermissionStatusResult) {
+        track(permissionStatusResult)
+        when (permissionStatusResult.permission) {
+            in PERMISSIONS_STORAGE -> {
+                requestStoragePermissions()
+            }
+            PERMISSIONS_CAMERA -> {
+                requestCameraPermissions()
             }
         }
-        return directory.absolutePath
     }
 
-    override fun registerPermissions(componentActivity: ComponentActivity) {
-        registerLauncherPermissions(componentActivity)
-        registerLauncherSettings(componentActivity)
-    }
-
-    override fun requestPermissions() {
+    override fun requestStoragePermissions() {
         activityResultLauncherPermissions?.launch(
             PERMISSIONS_STORAGE.toTypedArray()
         )
     }
 
-    override fun permissionObserver(): LiveData<Unit> = requestPermissionsLiveData
+    override fun requestCameraPermissions() {
+        activityResultLauncherCameraPermission?.launch(
+            PERMISSIONS_CAMERA
+        )
+    }
 
     override fun mediaList(): StateFlow<List<Image>> = _mediaUris
+    override fun cameraIsAvailable(): StateFlow<Boolean> = _cameraIsAvailable
 
     override fun loadThumbnailFor(media: Image): Bitmap {
         if (media.id == null) {
@@ -220,13 +198,40 @@ class Android9Handler(private val context: Context) : AndroidHandler {
         )
     }
 
-    private fun checkPermissionsAndScheduleExecutionCaseNeeded(
+    override fun takePhoto(
+        imageCapture: ImageCapture,
+        onImageCaptured: (Uri) -> Unit,
+        onError: (ImageCaptureException) -> Unit
+    ) {
+        cameraHandler.takePhoto(
+            file = generateInternalFileToSave(),
+            imageCapture = imageCapture,
+            onImageCaptured = onImageCaptured,
+            onError = onError,
+        )
+    }
+
+    private fun generateInternalFileToSave(): File {
+        val cw = ContextWrapper(context)
+
+        val directory = cw.getDir(INTERNAL_DIRECTORY, Context.MODE_PRIVATE)
+
+        return File(
+            directory,
+            SimpleDateFormat(
+                "yyyy-MM-dd-HH-mm-ss-SSS",
+                Locale.US,
+            ).format(System.currentTimeMillis()) + ".jpg"
+        )
+    }
+
+    private fun checkStoragePermissionsAndScheduleExecutionCaseNeeded(
         execution: QueueExecution,
-    ): Boolean {
+    ): PermissionStatusResult {
         val hasPermission = PERMISSIONS_STORAGE.arePermissionsGrated(context)
 
-        if (hasPermission.not()) {
-            requestPermissionsLiveData.value = Unit
+        if (hasPermission.isDenied) {
+            requestStoragePermissions()
             queueExecution.add(execution)
         }
 
@@ -239,22 +244,25 @@ class Android9Handler(private val context: Context) : AndroidHandler {
         activityResultLauncherSettings = componentActivity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            if (PERMISSIONS_STORAGE.arePermissionsGrated(context)) {
-                executeNextOnQueue()
+            val permissionStatus = PERMISSIONS_STORAGE.arePermissionsGrated(context)
+
+            if (permissionStatus.isDenied) {
+                this.permissionStatusResult.send(permissionStatus)
             } else {
-                permissionIsDenied.send(true)
+                executeNextOnQueue()
             }
+
             track(result)
         }
     }
 
-    private fun registerLauncherPermissions(componentActivity: ComponentActivity) {
+    private fun registerLauncherStoragePermissions(componentActivity: ComponentActivity) {
         activityResultLauncherPermissions = componentActivity.registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
-            if (permissions.entries.arePermissionsGranted()) {
-                executeNextOnQueue()
-            } else {
+            val permissionStatus = permissions.entries.arePermissionsGranted()
+
+            if (permissionStatus.isDenied) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     track("try check each permission")
                     for (permission in PERMISSIONS_STORAGE) {
@@ -272,13 +280,32 @@ class Android9Handler(private val context: Context) : AndroidHandler {
 
                     track("permission was just denied")
                     // Permission was not blocked, try request again
-                    permissionIsDenied.send(true)
+                    this.permissionStatusResult.send(permissionStatus)
                 } else {
                     track("normal, open settings")
                     // Permission was blocked, request for the settings
                     openSettingsScreen()
                 }
+            } else {
+                executeNextOnQueue()
             }
+        }
+    }
+
+    private fun registerLauncherCameraPermissions(componentActivity: ComponentActivity) {
+        activityResultLauncherCameraPermission = componentActivity.registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+
+            if (isGranted) {
+                _cameraIsAvailable.value = true
+            } else {
+                permissionStatusResult.send(
+                    PermissionStatusResult(permission = PERMISSIONS_CAMERA, isDenied = true)
+                )
+            }
+
+            track("camera=$isGranted")
         }
     }
 
