@@ -50,8 +50,6 @@ class Android9Handler(
     private var activityResultLauncherSettings: ActivityResultLauncher<Intent>? = null
     private var activityResultLauncherCameraPermission: ActivityResultLauncher<String>? = null
 
-    private val queueExecution: Queue<QueueExecution> = LinkedList()
-
     private val _mediaUris: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
     private val _cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
     private val _imageSaved: MutableStateFlow<Image?> = MutableStateFlow(null)
@@ -59,6 +57,8 @@ class Android9Handler(
 
     override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> =
         ConflatedEventBus()
+    override val queueExecution: Queue<QueueExecution> = LinkedList()
+    override var lastExecution: QueueExecution = QueueExecution.NONE
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
@@ -88,6 +88,8 @@ class Android9Handler(
         } ?: listOf()
 
         _mediaUris.value = imageList
+
+        lastExecution = QueueExecution.RETRIEVE_INTERNAL_MEDIA
 
         track(result)
     }
@@ -145,6 +147,9 @@ class Android9Handler(
         }
 
         _mediaUris.value = imageList
+
+        lastExecution = QueueExecution.RETRIEVE_EXTERNAL_MEDIA
+
         track(imageList)
     }
 
@@ -224,6 +229,11 @@ class Android9Handler(
 
         _imageSaved.value = Image(uri = Uri.fromFile(file), name = file.name, id = null).apply {
             track(this)
+        }
+
+        // TODO when I make the external save, then I'll remove this statement
+        if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
+            execute(lastExecution)
         }
     }
 
@@ -327,7 +337,12 @@ class Android9Handler(
 
     private fun executeNextOnQueue() {
         track(queueExecution)
-        when (queueExecution.remove()) {
+        execute(queueExecution.remove())
+    }
+
+    private fun execute(queueExecution: QueueExecution) {
+        track(queueExecution)
+        when (queueExecution) {
             QueueExecution.RETRIEVE_INTERNAL_MEDIA -> loadInternalMedia()
             QueueExecution.RETRIEVE_EXTERNAL_MEDIA -> loadExternalMedia()
             else -> {}

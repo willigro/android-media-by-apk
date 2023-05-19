@@ -10,9 +10,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 class Android12Handler: AndroidHandler {
 
-    private val queueExecution: Queue<QueueExecution> = LinkedList()
-
     override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> = ConflatedEventBus(PermissionStatusResult())
+    override val queueExecution: Queue<QueueExecution> = LinkedList()
+    override var lastExecution: QueueExecution = QueueExecution.NONE
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_12
     override fun registerPermissions(componentActivity: ComponentActivity) {

@@ -9,6 +9,7 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.Image
 import com.rittmann.core.tracker.track
+import java.util.*
 import java.util.concurrent.ExecutorService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface AndroidHandler {
     val permissionStatusResult: ConflatedEventBus<PermissionStatusResult>
+    val queueExecution: Queue<QueueExecution>
+    var lastExecution: QueueExecution
+
     fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
     // TODO make all implement it
@@ -54,6 +58,7 @@ enum class AndroidVersion {
 }
 
 enum class QueueExecution {
+    NONE,
     RETRIEVE_INTERNAL_MEDIA,
     RETRIEVE_EXTERNAL_MEDIA,
 }
