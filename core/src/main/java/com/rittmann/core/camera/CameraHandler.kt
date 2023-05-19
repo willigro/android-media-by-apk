@@ -3,7 +3,7 @@ package com.rittmann.core.camera
 import android.net.Uri
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import com.rittmann.core.tracker.track
+import androidx.camera.core.ImageProxy
 import java.io.File
 import java.util.concurrent.ExecutorService
 
@@ -21,13 +21,31 @@ class CameraHandler(private val executorService: ExecutorService) {
             executorService,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exception: ImageCaptureException) {
-                    track(exception)
                     onError(exception)
                 }
 
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val savedUri = Uri.fromFile(file)
                     onImageCaptured(savedUri)
+                }
+            }
+        )
+    }
+
+    fun takePhoto(
+        imageCapture: ImageCapture,
+        onImageCaptured: (ImageProxy) -> Unit,
+        onError: (ImageCaptureException) -> Unit,
+    ) {
+        imageCapture.takePicture(
+            executorService,
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onError(exception: ImageCaptureException) {
+                    onError(exception)
+                }
+
+                override fun onCaptureSuccess(image: ImageProxy) {
+                    onImageCaptured(image)
                 }
             }
         )

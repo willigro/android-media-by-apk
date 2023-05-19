@@ -1,12 +1,9 @@
 package com.rittmann.core.android
 
 import android.graphics.Bitmap
-import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.Image
 import java.util.*
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +39,14 @@ class Android10Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
+    override fun pictureSaved(): StateFlow<Image?> {
+        TODO("Not yet implemented")
+    }
+
+    override fun pictureTaken(): StateFlow<ImageProxy?> {
+        TODO("Not yet implemented")
+    }
+
     override fun loadThumbnailFor(media: Image): Bitmap {
         TODO("Not yet implemented")
     }
@@ -51,10 +56,12 @@ class Android10Handler: AndroidHandler {
     }
 
     override fun takePhoto(
-        imageCapture: ImageCapture,
-        onImageCaptured: (Uri) -> Unit,
-        onError: (ImageCaptureException) -> Unit
+        imageCapture: ImageCapture
     ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun savePicture(bitmap: Bitmap) {
         TODO("Not yet implemented")
     }
 }

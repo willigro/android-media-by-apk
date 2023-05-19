@@ -14,11 +14,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import com.rittmann.core.camera.CameraHandler
 import com.rittmann.core.data.Image
 import com.rittmann.core.extensions.arePermissionsGranted
 import com.rittmann.core.extensions.arePermissionsGrated
+import com.rittmann.core.extensions.saveTo
 import com.rittmann.core.tracker.track
 import java.io.File
 import java.text.SimpleDateFormat
@@ -53,6 +54,8 @@ class Android9Handler(
 
     private val _mediaUris: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
     private val _cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    private val _imageSaved: MutableStateFlow<Image?> = MutableStateFlow(null)
+    private val _imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
 
     override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> =
         ConflatedEventBus()
@@ -177,6 +180,8 @@ class Android9Handler(
 
     override fun mediaList(): StateFlow<List<Image>> = _mediaUris
     override fun cameraIsAvailable(): StateFlow<Boolean> = _cameraIsAvailable
+    override fun pictureSaved(): StateFlow<Image?> = _imageSaved
+    override fun pictureTaken(): StateFlow<ImageProxy?> = _imageProxyTaken
 
     override fun loadThumbnailFor(media: Image): Bitmap {
         if (media.id == null) {
@@ -199,16 +204,27 @@ class Android9Handler(
     }
 
     override fun takePhoto(
-        imageCapture: ImageCapture,
-        onImageCaptured: (Uri) -> Unit,
-        onError: (ImageCaptureException) -> Unit
+        imageCapture: ImageCapture
     ) {
         cameraHandler.takePhoto(
-            file = generateInternalFileToSave(),
             imageCapture = imageCapture,
-            onImageCaptured = onImageCaptured,
-            onError = onError,
+            onImageCaptured = {
+                _imageProxyTaken.value = it
+            },
+            onError = {
+                track(it)
+            },
         )
+    }
+
+    override fun savePicture(bitmap: Bitmap) {
+        val file = generateInternalFileToSave()
+
+        bitmap.saveTo(file)
+
+        _imageSaved.value = Image(uri = Uri.fromFile(file), name = file.name, id = null).apply {
+            track(this)
+        }
     }
 
     private fun generateInternalFileToSave(): File {

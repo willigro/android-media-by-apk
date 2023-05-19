@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.Image
 import com.rittmann.core.tracker.track
 import java.util.concurrent.ExecutorService
@@ -27,13 +28,12 @@ interface AndroidHandler {
     fun requestCameraPermissions()
     fun mediaList(): StateFlow<List<Image>>
     fun cameraIsAvailable(): StateFlow<Boolean>
+    fun pictureSaved(): StateFlow<Image?>
+    fun pictureTaken(): StateFlow<ImageProxy?>
     fun loadThumbnailFor(media: Image): Bitmap
     fun loadBitmapFor(media: Image): Bitmap
-    fun takePhoto(
-        imageCapture: ImageCapture,
-        onImageCaptured: (Uri) -> Unit,
-        onError: (ImageCaptureException) -> Unit
-    )
+    fun takePhoto(imageCapture: ImageCapture)
+    fun savePicture(bitmap: Bitmap)
 }
 
 object AndroidHandlerFactory {
