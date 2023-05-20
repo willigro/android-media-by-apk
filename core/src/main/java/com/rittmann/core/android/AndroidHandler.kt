@@ -2,23 +2,24 @@ package com.rittmann.core.android
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.Image
 import com.rittmann.core.tracker.track
 import java.util.*
 import java.util.concurrent.ExecutorService
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 
 interface AndroidHandler {
     val permissionStatusResult: ConflatedEventBus<PermissionStatusResult>
     val queueExecution: Queue<QueueExecution>
     var lastExecution: QueueExecution
+    val cameraIsAvailable: MutableStateFlow<Boolean>
+    val imageSaved: MutableStateFlow<Image?>
+    val imageProxyTaken: MutableStateFlow<ImageProxy?>
+    val mediaImageList: MutableStateFlow<List<Image>>
 
     fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
@@ -30,10 +31,6 @@ interface AndroidHandler {
     fun requestPermissions(permissionStatusResult: PermissionStatusResult)
     fun requestStoragePermissions()
     fun requestCameraPermissions()
-    fun mediaList(): StateFlow<List<Image>>
-    fun cameraIsAvailable(): StateFlow<Boolean>
-    fun pictureSaved(): StateFlow<Image?>
-    fun pictureTaken(): StateFlow<ImageProxy?>
     fun loadThumbnailFor(media: Image): Bitmap
     fun loadBitmapFor(media: Image): Bitmap
     fun takePhoto(imageCapture: ImageCapture)

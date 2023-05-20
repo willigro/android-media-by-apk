@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -30,6 +31,7 @@ import androidx.navigation.NavController
 import com.rittmann.components.ui.TextBody
 import com.rittmann.core.extensions.getCameraProvider
 import com.rittmann.core.extensions.toBitmap
+import com.rittmann.core.tracker.track
 
 
 @Composable
@@ -37,14 +39,29 @@ fun CreateMediaScreenRoot(
     navController: NavController,
     createMediaViewModel: CreateMediaViewModel = hiltViewModel(),
 ) {
-    when (val uiState = createMediaViewModel.uiState.collectAsState().value) {
-        CameraUiState.TakePicture -> CameraView(viewModel = createMediaViewModel)
+    val uiState = createMediaViewModel.uiState.collectAsState().value
+
+    track("Stating=$uiState")
+
+    when (uiState) {
+        is CameraUiState.TakePicture -> CameraView(viewModel = createMediaViewModel)
         is CameraUiState.ShowPicture -> TakenImage(
             uiState = uiState,
             takeAgain = createMediaViewModel::takeAgain,
             saveImage = createMediaViewModel::saveImage,
         )
-        else -> {}
+        is CameraUiState.Saved -> {
+            LaunchedEffect(Unit) {
+                navController.popBackStack()
+            }
+        }
+        else -> {
+            TextBody(
+                text = "Loading info",
+                modifier = Modifier.fillMaxSize(),
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 

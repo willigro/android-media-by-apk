@@ -6,7 +6,6 @@ import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rittmann.core.android.AndroidHandler
-import com.rittmann.core.tracker.track
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +19,7 @@ class CreateMediaViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<CameraUiState> = MutableStateFlow(
-        CameraUiState.Idle
+        CameraUiState.Start
     )
     val uiState: StateFlow<CameraUiState>
         get() = _uiState
@@ -29,25 +28,24 @@ class CreateMediaViewModel @Inject constructor(
         androidHandler.requestCameraPermissions()
 
         viewModelScope.launch {
-            androidHandler.cameraIsAvailable().collectLatest {
+            androidHandler.cameraIsAvailable.collectLatest {
                 _uiState.value = CameraUiState.TakePicture
             }
         }
 
         viewModelScope.launch {
-            androidHandler.pictureSaved().collectLatest { image ->
-                track(image)
+            androidHandler.imageSaved.collectLatest { image ->
                 image?.also {
-                    // TODO, fow a while I'm going to reset, but later it will need to change
-                    _uiState.value = CameraUiState.Idle
+                    _uiState.value = CameraUiState.Saved
                 }
             }
         }
 
         viewModelScope.launch {
-            androidHandler.pictureTaken().collectLatest { image ->
-                track(image)
-                image?.also { _uiState.value = CameraUiState.ShowPicture(image) }
+            androidHandler.imageProxyTaken.collectLatest { image ->
+                image?.also {
+                    _uiState.value = CameraUiState.ShowPicture(image)
+                }
             }
         }
     }
@@ -55,23 +53,21 @@ class CreateMediaViewModel @Inject constructor(
     fun takePhoto(
         imageCapture: ImageCapture,
     ) {
-        track()
         androidHandler.takePhoto(imageCapture)
     }
 
     fun takeAgain() {
-        track()
         _uiState.value = CameraUiState.TakePicture
     }
 
     fun saveImage(bitmap: Bitmap) {
-        track()
         androidHandler.savePicture(bitmap)
     }
 }
 
 sealed class CameraUiState {
-    object Idle : CameraUiState()
+    object Start : CameraUiState()
+    object Saved : CameraUiState()
     object TakePicture : CameraUiState()
     class ShowPicture(val image: ImageProxy) : CameraUiState()
 }

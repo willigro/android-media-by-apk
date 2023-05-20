@@ -3,15 +3,15 @@ package com.rittmann.mediacontrol.medias
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -139,13 +139,24 @@ fun MediasList(
         columns = GridCells.Fixed(2),
     ) {
         items(list) { media ->
-            val bitmap = loadBitmapFor(media)
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier
-                    .height(AppTheme.dimensions.mediaDimens.thumbnailHeight),
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                val bitmap = loadBitmapFor(media)
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .height(AppTheme.dimensions.mediaDimens.thumbnailHeight),
+                )
+
+                TextBody(
+                    text = media.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = AppTheme.dimensions.paddingTopBetweenComponentsSmall),
+                )
+            }
         }
     }
 }

@@ -26,7 +26,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 
 class Android9Handler(
@@ -50,15 +49,14 @@ class Android9Handler(
     private var activityResultLauncherSettings: ActivityResultLauncher<Intent>? = null
     private var activityResultLauncherCameraPermission: ActivityResultLauncher<String>? = null
 
-    private val _mediaUris: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
-    private val _cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    private val _imageSaved: MutableStateFlow<Image?> = MutableStateFlow(null)
-    private val _imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
-
     override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> =
         ConflatedEventBus()
     override val queueExecution: Queue<QueueExecution> = LinkedList()
     override var lastExecution: QueueExecution = QueueExecution.NONE
+    override val cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    override val imageSaved: MutableStateFlow<Image?> = MutableStateFlow(null)
+    override val imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
+    override val mediaImageList: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
@@ -79,7 +77,7 @@ class Android9Handler(
 
         val imageList = mutableListOf<Image>()
 
-        val result = files?.filter { file ->
+        files?.filter { file ->
             file.canRead()
         }?.map { file ->
 //            val imageBytes = it.readBytes()
@@ -87,11 +85,11 @@ class Android9Handler(
             imageList += Image(uri = Uri.fromFile(file), name = file.name, id = null)
         } ?: listOf()
 
-        _mediaUris.value = imageList
+        mediaImageList.value = imageList
 
         lastExecution = QueueExecution.RETRIEVE_INTERNAL_MEDIA
 
-        track(result)
+        track(imageList)
     }
 
     override fun loadExternalMedia() {
@@ -146,7 +144,7 @@ class Android9Handler(
             }
         }
 
-        _mediaUris.value = imageList
+        mediaImageList.value = imageList
 
         lastExecution = QueueExecution.RETRIEVE_EXTERNAL_MEDIA
 
@@ -183,11 +181,6 @@ class Android9Handler(
         )
     }
 
-    override fun mediaList(): StateFlow<List<Image>> = _mediaUris
-    override fun cameraIsAvailable(): StateFlow<Boolean> = _cameraIsAvailable
-    override fun pictureSaved(): StateFlow<Image?> = _imageSaved
-    override fun pictureTaken(): StateFlow<ImageProxy?> = _imageProxyTaken
-
     override fun loadThumbnailFor(media: Image): Bitmap {
         if (media.id == null) {
             return loadBitmapFor(media)
@@ -214,7 +207,7 @@ class Android9Handler(
         cameraHandler.takePhoto(
             imageCapture = imageCapture,
             onImageCaptured = {
-                _imageProxyTaken.value = it
+                imageProxyTaken.value = it
             },
             onError = {
                 track(it)
@@ -227,8 +220,8 @@ class Android9Handler(
 
         bitmap.saveTo(file)
 
-        _imageSaved.value = Image(uri = Uri.fromFile(file), name = file.name, id = null).apply {
-            track(this)
+        Image(uri = Uri.fromFile(file), name = file.name, id = null).apply {
+            imageSaved.tryEmit(this)
         }
 
         // TODO when I make the external save, then I'll remove this statement
@@ -324,7 +317,7 @@ class Android9Handler(
         ) { isGranted ->
 
             if (isGranted) {
-                _cameraIsAvailable.value = true
+                cameraIsAvailable.value = true
             } else {
                 permissionStatusResult.send(
                     PermissionStatusResult(permission = PERMISSIONS_CAMERA, isDenied = true)

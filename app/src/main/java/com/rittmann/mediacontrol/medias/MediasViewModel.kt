@@ -1,11 +1,11 @@
 package com.rittmann.mediacontrol.medias
 
 import android.graphics.Bitmap
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rittmann.core.android.AndroidHandler
 import com.rittmann.core.android.AndroidVersion
 import com.rittmann.core.data.Image
-import com.rittmann.core.lifecycle.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class MediasViewModel @Inject constructor(
     private val androidHandler: AndroidHandler,
-) : BaseViewModel() {
+) : ViewModel() {
 
     private val _uiState: MutableStateFlow<MediasUiState> = MutableStateFlow(
         MediasUiState.InitialState(androidHandler.version())
@@ -28,7 +28,7 @@ class MediasViewModel @Inject constructor(
         androidHandler.loadInternalMedia()
 
         viewModelScope.launch {
-            androidHandler.mediaList().collectLatest {
+            androidHandler.mediaImageList.collectLatest {
                 _uiState.value.mediaList.value = it
             }
         }

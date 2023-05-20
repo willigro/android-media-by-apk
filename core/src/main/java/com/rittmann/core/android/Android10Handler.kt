@@ -6,13 +6,17 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.Image
 import java.util.*
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class Android10Handler: AndroidHandler {
 
     override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> = ConflatedEventBus(PermissionStatusResult())
     override val queueExecution: Queue<QueueExecution> = LinkedList()
     override var lastExecution: QueueExecution = QueueExecution.NONE
+    override val cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    override val imageSaved: MutableStateFlow<Image?> = MutableStateFlow(null)
+    override val imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
+    override val mediaImageList: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_10
     override fun registerPermissions(componentActivity: ComponentActivity) {
@@ -28,22 +32,6 @@ class Android10Handler: AndroidHandler {
     }
 
     override fun requestCameraPermissions() {
-        TODO("Not yet implemented")
-    }
-
-    override fun mediaList(): StateFlow<List<Image>> {
-        TODO("Not yet implemented")
-    }
-
-    override fun cameraIsAvailable(): StateFlow<Boolean> {
-        TODO("Not yet implemented")
-    }
-
-    override fun pictureSaved(): StateFlow<Image?> {
-        TODO("Not yet implemented")
-    }
-
-    override fun pictureTaken(): StateFlow<ImageProxy?> {
         TODO("Not yet implemented")
     }
 
