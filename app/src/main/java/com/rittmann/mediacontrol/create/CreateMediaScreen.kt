@@ -8,7 +8,9 @@ import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
@@ -28,7 +30,9 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.rittmann.components.theme.AppTheme
 import com.rittmann.components.ui.TextBody
+import com.rittmann.core.android.Storage
 import com.rittmann.core.extensions.getCameraProvider
 import com.rittmann.core.extensions.toBitmap
 import com.rittmann.core.tracker.track
@@ -93,7 +97,6 @@ fun CameraView(
         preview.setSurfaceProvider(previewView.surfaceProvider)
     }
 
-    // 3
     Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.fillMaxSize()) {
         AndroidView(
             factory = {
@@ -118,7 +121,7 @@ fun CameraView(
 fun TakenImage(
     uiState: CameraUiState.ShowPicture,
     takeAgain: () -> Unit,
-    saveImage: (Bitmap) -> Unit,
+    saveImage: (Bitmap, Storage) -> Unit,
 ) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val showSaveButton = remember {
@@ -168,13 +171,29 @@ fun TakenImage(
             }
         ) {
             if (showSaveButton.value) {
-                Button(
-                    modifier = Modifier.padding(bottom = 20.dp),
-                    onClick = {
-                        bitmap?.let { saveImage(it) }
-                    }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = AppTheme.dimensions.paddingTopBetweenComponentsMedium),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextBody(text = "Save")
+                    Button(
+                        modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                        onClick = {
+                            bitmap?.let { saveImage(it, Storage.INTERNAL) }
+                        }
+                    ) {
+                        TextBody(text = "Save Internal")
+                    }
+
+                    Button(
+                        modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                        onClick = {
+                            bitmap?.let { saveImage(it, Storage.EXTERNAL) }
+                        }
+                    ) {
+                        TextBody(text = "Save External")
+                    }
                 }
             }
         }

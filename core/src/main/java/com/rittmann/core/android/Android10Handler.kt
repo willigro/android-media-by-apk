@@ -49,7 +49,11 @@ class Android10Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun savePicture(bitmap: Bitmap) {
+    override fun savePicture(bitmap: Bitmap, storage: Storage) {
+        TODO("Not yet implemented")
+    }
+
+    override fun disposeCameraMembers() {
         TODO("Not yet implemented")
     }
 }

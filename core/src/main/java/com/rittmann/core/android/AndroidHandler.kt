@@ -34,7 +34,8 @@ interface AndroidHandler {
     fun loadThumbnailFor(media: Image): Bitmap
     fun loadBitmapFor(media: Image): Bitmap
     fun takePhoto(imageCapture: ImageCapture)
-    fun savePicture(bitmap: Bitmap)
+    fun savePicture(bitmap: Bitmap, storage: Storage)
+    fun disposeCameraMembers()
 }
 
 object AndroidHandlerFactory {
@@ -75,3 +76,7 @@ data class PermissionStatusResult(
     val permission: String? = null,
     val isDenied: Boolean = false,
 )
+
+enum class Storage {
+    INTERNAL, EXTERNAL
+}

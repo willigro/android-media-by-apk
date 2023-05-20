@@ -6,8 +6,11 @@ import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rittmann.core.android.AndroidHandler
+import com.rittmann.core.android.Storage
+import com.rittmann.core.tracker.track
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -24,16 +27,20 @@ class CreateMediaViewModel @Inject constructor(
     val uiState: StateFlow<CameraUiState>
         get() = _uiState
 
+    private var jobCameraIsAvailable: Job? = null
+    private var jobImageSaved: Job? = null
+    private var jobImageProxyTaken: Job? = null
+
     init {
         androidHandler.requestCameraPermissions()
 
-        viewModelScope.launch {
+        jobCameraIsAvailable = viewModelScope.launch {
             androidHandler.cameraIsAvailable.collectLatest {
                 _uiState.value = CameraUiState.TakePicture
             }
         }
 
-        viewModelScope.launch {
+        jobImageSaved = viewModelScope.launch {
             androidHandler.imageSaved.collectLatest { image ->
                 image?.also {
                     _uiState.value = CameraUiState.Saved
@@ -41,7 +48,7 @@ class CreateMediaViewModel @Inject constructor(
             }
         }
 
-        viewModelScope.launch {
+        jobImageProxyTaken = viewModelScope.launch {
             androidHandler.imageProxyTaken.collectLatest { image ->
                 image?.also {
                     _uiState.value = CameraUiState.ShowPicture(image)
@@ -60,8 +67,18 @@ class CreateMediaViewModel @Inject constructor(
         _uiState.value = CameraUiState.TakePicture
     }
 
-    fun saveImage(bitmap: Bitmap) {
-        androidHandler.savePicture(bitmap)
+    fun saveImage(bitmap: Bitmap, storage: Storage) {
+        androidHandler.savePicture(bitmap, storage)
+    }
+
+    override fun onCleared() {
+        track()
+        super.onCleared()
+        androidHandler.disposeCameraMembers()
+
+        jobCameraIsAvailable?.cancel()
+        jobImageSaved?.cancel()
+        jobImageProxyTaken?.cancel()
     }
 }
 

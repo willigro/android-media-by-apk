@@ -215,19 +215,35 @@ class Android9Handler(
         )
     }
 
-    override fun savePicture(bitmap: Bitmap) {
-        val file = generateInternalFileToSave()
+    override fun savePicture(bitmap: Bitmap, storage: Storage) {
+        track(storage)
+        when (storage) {
+            Storage.INTERNAL -> {
+                val file = generateInternalFileToSave()
 
-        bitmap.saveTo(file)
+                bitmap.saveTo(file)
 
-        Image(uri = Uri.fromFile(file), name = file.name, id = null).apply {
-            imageSaved.tryEmit(this)
+                Image(uri = Uri.fromFile(file), name = file.name, id = null).apply {
+                    imageSaved.tryEmit(this)
+                }
+
+                if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
+                    execute(lastExecution)
+                }
+            }
+            Storage.EXTERNAL -> {
+                if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                    execute(lastExecution)
+                }
+            }
         }
+    }
 
-        // TODO when I make the external save, then I'll remove this statement
-        if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
-            execute(lastExecution)
-        }
+    override fun disposeCameraMembers() {
+        track()
+        cameraIsAvailable.value = false
+        imageProxyTaken.value = null
+        imageSaved.value = null
     }
 
     private fun generateInternalFileToSave(): File {
