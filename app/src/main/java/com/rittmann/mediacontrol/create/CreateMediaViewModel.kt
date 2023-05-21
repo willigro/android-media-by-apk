@@ -13,6 +13,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,9 @@ class CreateMediaViewModel @Inject constructor(
     private var jobCameraIsAvailable: Job? = null
     private var jobImageSaved: Job? = null
     private var jobImageProxyTaken: Job? = null
+
+    private val _name = MutableStateFlow("")
+    val name = _name.asStateFlow()
 
     init {
         androidHandler.requestCameraPermissions()
@@ -57,6 +61,10 @@ class CreateMediaViewModel @Inject constructor(
         }
     }
 
+    fun setName(name: String) {
+        _name.value = name
+    }
+
     fun takePhoto(
         imageCapture: ImageCapture,
     ) {
@@ -68,7 +76,7 @@ class CreateMediaViewModel @Inject constructor(
     }
 
     fun saveImage(bitmap: Bitmap, storage: Storage) {
-        androidHandler.savePicture(bitmap, storage)
+        androidHandler.savePicture(bitmap, storage, _name.value)
     }
 
     override fun onCleared() {

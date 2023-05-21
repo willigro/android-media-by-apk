@@ -31,11 +31,13 @@ import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rittmann.components.theme.AppTheme
+import com.rittmann.components.ui.SimpleTextField
 import com.rittmann.components.ui.TextBody
 import com.rittmann.core.android.Storage
 import com.rittmann.core.extensions.getCameraProvider
 import com.rittmann.core.extensions.toBitmap
 import com.rittmann.core.tracker.track
+import kotlinx.coroutines.flow.StateFlow
 
 
 @Composable
@@ -53,6 +55,8 @@ fun CreateMediaScreenRoot(
             uiState = uiState,
             takeAgain = createMediaViewModel::takeAgain,
             saveImage = createMediaViewModel::saveImage,
+            name = createMediaViewModel.name,
+            setName = createMediaViewModel::setName,
         )
         is CameraUiState.Saved -> {
             LaunchedEffect(Unit) {
@@ -122,6 +126,8 @@ fun TakenImage(
     uiState: CameraUiState.ShowPicture,
     takeAgain: () -> Unit,
     saveImage: (Bitmap, Storage) -> Unit,
+    name: StateFlow<String>,
+    setName: (String) -> Unit
 ) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val showSaveButton = remember {
@@ -130,13 +136,17 @@ fun TakenImage(
 
         val bitmap = uiState.image.image?.toBitmap()
 
-        val (containerImage, buttonSave) = createRefs()
+        val (
+            containerImage,
+            infoContainer,
+            buttonSave,
+        ) = createRefs()
 
         Box(
             contentAlignment = Alignment.BottomCenter,
             modifier = Modifier.constrainAs(containerImage) {
                 top.linkTo(parent.top)
-                bottom.linkTo(buttonSave.top)
+                bottom.linkTo(infoContainer.top)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
                 height = Dimension.fillToConstraints
@@ -161,6 +171,16 @@ fun TakenImage(
             ) {
                 TextBody(text = "Take Again")
             }
+        }
+
+        Box(
+            modifier = Modifier.constrainAs(infoContainer) {
+                bottom.linkTo(buttonSave.top)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ) {
+            ImageName(modifier = Modifier, name = name, setName = setName)
         }
 
         Box(
@@ -198,4 +218,15 @@ fun TakenImage(
             }
         }
     }
+}
+
+@Composable
+fun ImageName(modifier: Modifier, name: StateFlow<String>, setName: (String) -> Unit) {
+    val text = name.collectAsState().value
+    SimpleTextField(
+        modifier = modifier,
+        text = text,
+        hint = "Name",
+        onTextChanged = setName,
+    )
 }

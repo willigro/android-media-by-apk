@@ -34,7 +34,7 @@ interface AndroidHandler {
     fun loadThumbnailFor(media: Image): Bitmap
     fun loadBitmapFor(media: Image): Bitmap
     fun takePhoto(imageCapture: ImageCapture)
-    fun savePicture(bitmap: Bitmap, storage: Storage)
+    fun savePicture(bitmap: Bitmap, storage: Storage, name: String)
     fun disposeCameraMembers()
 }
 

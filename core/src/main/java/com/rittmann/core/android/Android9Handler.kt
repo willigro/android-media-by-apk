@@ -7,7 +7,6 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
-import android.media.MediaScannerConnection.OnScanCompletedListener
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -83,8 +82,6 @@ class Android9Handler(
         files?.filter { file ->
             file.canRead()
         }?.map { file ->
-//            val imageBytes = it.readBytes()
-//            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
             imageList += Image(uri = Uri.fromFile(file), name = file.name, id = null)
         } ?: listOf()
 
@@ -218,11 +215,11 @@ class Android9Handler(
         )
     }
 
-    override fun savePicture(bitmap: Bitmap, storage: Storage) {
+    override fun savePicture(bitmap: Bitmap, storage: Storage, name: String) {
         track(storage)
         when (storage) {
             Storage.INTERNAL -> {
-                val file = generateInternalFileToSave()
+                val file = generateInternalFileToSave(name)
 
                 bitmap.saveTo(file)
 
@@ -235,11 +232,15 @@ class Android9Handler(
                 }
             }
             Storage.EXTERNAL -> {
-                val file = generateExternalFileToSave()
+                val file = generateExternalFileToSave(name)
 
                 bitmap.saveTo(file)
 
-                MediaScannerConnection.scanFile(context, arrayOf(file.toString()), null) { path, uri ->
+                MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(file.toString()),
+                    null
+                ) { path, uri ->
                     track("path=$path, uri=$uri, ${Uri.fromFile(file)}")
 
                     Image(uri = uri, name = file.name, id = null).apply {
@@ -262,18 +263,19 @@ class Android9Handler(
         imageSaved.value = null
     }
 
-    private fun generateInternalFileToSave(): File {
+    private fun generateInternalFileToSave(name: String): File {
         val cw = ContextWrapper(context)
 
         val directory = cw.getDir(INTERNAL_DIRECTORY, Context.MODE_PRIVATE)
 
         return File(
             directory,
-            generateFileName(),
+            generateFileName(name),
         )
     }
 
-    private fun generateExternalFileToSave(): File {
+    private fun generateExternalFileToSave(name: String): File {
+        track(name)
         val directory: String = Environment.getExternalStorageDirectory().toString()
 
         val myDir = File(directory)
@@ -284,14 +286,19 @@ class Android9Handler(
 
         return File(
             directory,
-            generateFileName(),
+            generateFileName(name),
         )
     }
 
-    private fun generateFileName(): String = SimpleDateFormat(
-        "yyyy-MM-dd-HH-mm-ss-SSS",
-        Locale.US,
-    ).format(System.currentTimeMillis()) + ".jpg"
+    private fun generateFileName(name: String): String =
+        if (name.isEmpty()) {
+            SimpleDateFormat(
+                "yyyy-MM-dd-HH-mm-ss-SSS",
+                Locale.US,
+            ).format(System.currentTimeMillis()) + ".jpg"
+        } else {
+            "$name.jpg"
+        }
 
     private fun checkStoragePermissionsAndScheduleExecutionCaseNeeded(
         execution: QueueExecution,

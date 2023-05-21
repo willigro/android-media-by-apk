@@ -49,7 +49,7 @@ class Android12Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun savePicture(bitmap: Bitmap, storage: Storage) {
+    override fun savePicture(bitmap: Bitmap, storage: Storage, name: String) {
         TODO("Not yet implemented")
     }
 
