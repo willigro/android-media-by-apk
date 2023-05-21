@@ -6,8 +6,11 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
+import android.media.MediaScannerConnection
+import android.media.MediaScannerConnection.OnScanCompletedListener
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -232,8 +235,21 @@ class Android9Handler(
                 }
             }
             Storage.EXTERNAL -> {
-                if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
-                    execute(lastExecution)
+                val file = generateExternalFileToSave()
+
+                bitmap.saveTo(file)
+
+                MediaScannerConnection.scanFile(context, arrayOf(file.toString()), null) { path, uri ->
+                    track("path=$path, uri=$uri, ${Uri.fromFile(file)}")
+
+                    Image(uri = uri, name = file.name, id = null).apply {
+                        track("Saving image=$this")
+                        imageSaved.tryEmit(this)
+                    }
+
+                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                        execute(lastExecution)
+                    }
                 }
             }
         }
@@ -253,12 +269,29 @@ class Android9Handler(
 
         return File(
             directory,
-            SimpleDateFormat(
-                "yyyy-MM-dd-HH-mm-ss-SSS",
-                Locale.US,
-            ).format(System.currentTimeMillis()) + ".jpg"
+            generateFileName(),
         )
     }
+
+    private fun generateExternalFileToSave(): File {
+        val directory: String = Environment.getExternalStorageDirectory().toString()
+
+        val myDir = File(directory)
+
+        if (!myDir.exists()) {
+            myDir.mkdirs()
+        }
+
+        return File(
+            directory,
+            generateFileName(),
+        )
+    }
+
+    private fun generateFileName(): String = SimpleDateFormat(
+        "yyyy-MM-dd-HH-mm-ss-SSS",
+        Locale.US,
+    ).format(System.currentTimeMillis()) + ".jpg"
 
     private fun checkStoragePermissionsAndScheduleExecutionCaseNeeded(
         execution: QueueExecution,
