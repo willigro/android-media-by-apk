@@ -2,16 +2,19 @@ package com.rittmann.mediacontrol.create
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.media.ExifInterface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +38,7 @@ import com.rittmann.components.ui.SimpleTextField
 import com.rittmann.components.ui.TextBody
 import com.rittmann.core.android.Storage
 import com.rittmann.core.extensions.getCameraProvider
-import com.rittmann.core.extensions.toBitmap
+import com.rittmann.core.extensions.toBitmapExif
 import com.rittmann.core.tracker.track
 import kotlinx.coroutines.flow.StateFlow
 
@@ -134,53 +137,78 @@ fun TakenImage(
             mutableStateOf(false)
         }
 
-        val bitmap = uiState.image.image?.toBitmap()
+        val bitmapExif = uiState.image.image?.toBitmapExif()
 
         val (
             containerImage,
             infoContainer,
+            takeAgainContainer,
             buttonSave,
         ) = createRefs()
+
+        val middleGuideline = createGuidelineFromTop(0.5f)
 
         Box(
             contentAlignment = Alignment.BottomCenter,
             modifier = Modifier.constrainAs(containerImage) {
                 top.linkTo(parent.top)
-                bottom.linkTo(infoContainer.top)
+                bottom.linkTo(middleGuideline)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
                 height = Dimension.fillToConstraints
             }
         ) {
 
-            if (bitmap == null) {
+            if (bitmapExif?.bitmap == null) {
                 takeAgain()
             } else {
                 showSaveButton.value = true
 
                 Image(
-                    bitmap = bitmap.asImageBitmap(),
+                    bitmap = bitmapExif.bitmap!!.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+        }
 
-            Button(
-                modifier = Modifier.padding(bottom = 20.dp),
-                onClick = takeAgain,
-            ) {
-                TextBody(text = "Take Again")
-            }
+        Button(
+            modifier = Modifier.constrainAs(takeAgainContainer) {
+                top.linkTo(middleGuideline)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            },
+            onClick = takeAgain,
+        ) {
+            TextBody(text = "Take Again")
         }
 
         Box(
-            modifier = Modifier.constrainAs(infoContainer) {
-                bottom.linkTo(buttonSave.top)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-            }
+            modifier = Modifier
+                .fillMaxWidth()
+                .constrainAs(infoContainer) {
+                    top.linkTo(takeAgainContainer.bottom)
+                    bottom.linkTo(buttonSave.top)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    height = Dimension.fillToConstraints
+                }
         ) {
-            ImageName(modifier = Modifier, name = name, setName = setName)
+            Column(modifier = Modifier.wrapContentSize()) {
+                ImageName(modifier = Modifier, name = name, setName = setName)
+
+                bitmapExif?.exifInterface?.also { exifInterface ->
+                    TextBody(
+                        text = exifInterface.getAttribute(ExifInterface.TAG_DATETIME).toString()
+                    )
+                    TextBody(
+                        text = exifInterface.getAttribute(ExifInterface.TAG_ORIENTATION).toString()
+                    )
+                    TextBody(
+                        text = exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH).toString()
+                    )
+                }
+            }
         }
 
         Box(
@@ -200,7 +228,7 @@ fun TakenImage(
                     Button(
                         modifier = Modifier.weight(AppTheme.floats.sameWeight),
                         onClick = {
-                            bitmap?.let { saveImage(it, Storage.INTERNAL) }
+                            bitmapExif?.bitmap?.let { saveImage(it, Storage.INTERNAL) }
                         }
                     ) {
                         TextBody(text = "Save Internal")
@@ -209,7 +237,7 @@ fun TakenImage(
                     Button(
                         modifier = Modifier.weight(AppTheme.floats.sameWeight),
                         onClick = {
-                            bitmap?.let { saveImage(it, Storage.EXTERNAL) }
+                            bitmapExif?.bitmap?.let { saveImage(it, Storage.EXTERNAL) }
                         }
                     ) {
                         TextBody(text = "Save External")
