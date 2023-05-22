@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import com.rittmann.components.theme.AppTheme
 import com.rittmann.components.ui.SimpleTextField
 import com.rittmann.components.ui.TextBody
 import com.rittmann.core.android.Storage
+import com.rittmann.core.extensions.applyRandomFilter
 import com.rittmann.core.extensions.getCameraProvider
 import com.rittmann.core.extensions.toBitmapExif
 import com.rittmann.core.tracker.track
@@ -138,6 +140,9 @@ fun TakenImage(
         }
 
         val bitmapExif = uiState.image.image?.toBitmapExif()
+        val bitmap = remember {
+            mutableStateOf(bitmapExif?.bitmap)
+        }
 
         val (
             containerImage,
@@ -158,18 +163,11 @@ fun TakenImage(
                 height = Dimension.fillToConstraints
             }
         ) {
-
-            if (bitmapExif?.bitmap == null) {
-                takeAgain()
-            } else {
-                showSaveButton.value = true
-
-                Image(
-                    bitmap = bitmapExif.bitmap!!.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            ImageContainer(
+                bitmap = bitmap,
+                takeAgain = takeAgain,
+                showSaveButton = showSaveButton,
+            )
         }
 
         Button(
@@ -195,6 +193,14 @@ fun TakenImage(
                 }
         ) {
             Column(modifier = Modifier.wrapContentSize()) {
+                Button(
+                    onClick = {
+                        bitmap.value = bitmap.value?.applyRandomFilter()
+                    }
+                ) {
+                    TextBody(text = "Apply filter")
+                }
+
                 ImageName(modifier = Modifier, name = name, setName = setName)
 
                 bitmapExif?.exifInterface?.also { exifInterface ->
@@ -228,7 +234,7 @@ fun TakenImage(
                     Button(
                         modifier = Modifier.weight(AppTheme.floats.sameWeight),
                         onClick = {
-                            bitmapExif?.bitmap?.let { saveImage(it, Storage.INTERNAL) }
+                            bitmap.value?.let { saveImage(it, Storage.INTERNAL) }
                         }
                     ) {
                         TextBody(text = "Save Internal")
@@ -237,7 +243,7 @@ fun TakenImage(
                     Button(
                         modifier = Modifier.weight(AppTheme.floats.sameWeight),
                         onClick = {
-                            bitmapExif?.bitmap?.let { saveImage(it, Storage.EXTERNAL) }
+                            bitmap.value?.let { saveImage(it, Storage.EXTERNAL) }
                         }
                     ) {
                         TextBody(text = "Save External")
@@ -245,6 +251,26 @@ fun TakenImage(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ImageContainer(
+    bitmap: MutableState<Bitmap?>,
+    takeAgain: () -> Unit,
+    showSaveButton: MutableState<Boolean>,
+) {
+    track(bitmap)
+    if (bitmap.value == null) {
+        takeAgain()
+    } else {
+        showSaveButton.value = true
+
+        Image(
+            bitmap = bitmap.value!!.asImageBitmap(),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
