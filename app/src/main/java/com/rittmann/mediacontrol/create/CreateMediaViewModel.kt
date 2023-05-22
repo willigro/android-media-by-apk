@@ -53,9 +53,9 @@ class CreateMediaViewModel @Inject constructor(
         }
 
         jobImageProxyTaken = viewModelScope.launch {
-            androidHandler.imageProxyTaken.collectLatest { image ->
-                image?.also {
-                    _uiState.value = CameraUiState.ShowPicture(image)
+            androidHandler.imageProxyTaken.collectLatest { imageProxy ->
+                imageProxy?.also {
+                    _uiState.value = CameraUiState.ShowPicture(imageProxy)
                 }
             }
         }

@@ -184,9 +184,10 @@ object Depends {
         fun DependencyHandler.implementCameraX() {
             // CameraX
             val cameraxVersion = "1.0.1"
-            implement( "androidx.camera:camera-camera2:$cameraxVersion")
-            implement( "androidx.camera:camera-lifecycle:$cameraxVersion")
-            implement( "androidx.camera:camera-view:1.0.0-alpha27")
+            implement("androidx.camera:camera-camera2:$cameraxVersion")
+            implement("androidx.camera:camera-lifecycle:$cameraxVersion")
+            implement("androidx.camera:camera-view:1.0.0-alpha27")
+            implement("androidx.exifinterface:exifinterface:1.3.2")
         }
     }
 }

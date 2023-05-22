@@ -3,7 +3,10 @@ package com.rittmann.core.extensions
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.Image
+import androidx.exifinterface.media.ExifInterface
+import com.rittmann.core.android.Exif
 import com.rittmann.core.tracker.track
+import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
 fun Image.toBitmap(): Bitmap? {
@@ -12,7 +15,11 @@ fun Image.toBitmap(): Bitmap? {
         val bytes = ByteArray(buffer.capacity())
         track("Image=$this, buffer=$buffer, bytes=${bytes.size}")
         buffer.get(bytes)
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, null)
+        val exif = ExifInterface(ByteArrayInputStream(bytes))
+        Exif.fixBitmapOrientation(
+            exif,
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, null),
+        )
     } catch (e: Exception) {
         track(e)
         null
