@@ -27,6 +27,7 @@ import com.rittmann.components.ui.TextBody
 import com.rittmann.components.ui.TextH1
 import com.rittmann.components.ui.TextH2
 import com.rittmann.core.android.AndroidVersion
+import com.rittmann.core.android.Storage
 import com.rittmann.core.data.Image
 import com.rittmann.mediacontrol.navigation.Navigation
 
@@ -93,7 +94,9 @@ fun MediasScreenRoot(
                 end.linkTo(parent.end)
                 height = Dimension.fillToConstraints
             },
-            uiState = uiState, loadBitmapFor = viewModel::loadBitmapFor
+            navController = navController,
+            uiState = uiState,
+            loadBitmapFor = viewModel::loadBitmapFor,
         )
 
         Button(
@@ -129,6 +132,7 @@ fun ToolbarTitle(
 @Composable
 fun MediasList(
     modifier: Modifier,
+    navController: NavController,
     uiState: MediasUiState,
     loadBitmapFor: (media: Image) -> Bitmap,
 ) {
@@ -140,7 +144,14 @@ fun MediasList(
     ) {
         items(list) { media ->
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        navController.navigate(
+                            // TODO storage
+                            Navigation.Update.transformDestination(media.uri.toString(), Storage.INTERNAL)
+                        )
+                    },
             ) {
                 val bitmap = loadBitmapFor(media)
                 Image(

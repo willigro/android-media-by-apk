@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
+import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,7 @@ class Android11Handler: AndroidHandler {
     override val cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
     override val imageSaved: MutableStateFlow<Image?> = MutableStateFlow(null)
     override val imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
+    override val imageLoadedFromUri: MutableStateFlow<Image?> = MutableStateFlow(null)
     override val mediaImageList: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_11
@@ -35,11 +37,19 @@ class Android11Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun loadThumbnailFor(media: Image): Bitmap {
+    override fun loadMedia(uriPath: String, storage: Storage) {
         TODO("Not yet implemented")
     }
 
-    override fun loadBitmapFor(media: Image): Bitmap {
+    override fun loadThumbnail(media: Image): Bitmap {
+        TODO("Not yet implemented")
+    }
+
+    override fun loadBitmap(media: Image): Bitmap {
+        TODO("Not yet implemented")
+    }
+
+    override fun loadBitmapExif(media: Image): BitmapExif? {
         TODO("Not yet implemented")
     }
 
@@ -49,7 +59,7 @@ class Android11Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun savePicture(bitmap: Bitmap, storage: Storage, name: String) {
+    override fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String) {
         TODO("Not yet implemented")
     }
 

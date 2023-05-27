@@ -1,12 +1,11 @@
 package com.rittmann.core.extensions
 
-import android.R.attr.src
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.media.Image
 import androidx.exifinterface.media.ExifInterface
-import com.rittmann.core.android.Exif
+import com.rittmann.core.exif.Exif
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.tracker.track
 import java.io.ByteArrayInputStream

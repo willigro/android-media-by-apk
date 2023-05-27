@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
+import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
 import com.rittmann.core.tracker.track
 import java.util.*
@@ -19,6 +20,7 @@ interface AndroidHandler {
     val cameraIsAvailable: MutableStateFlow<Boolean>
     val imageSaved: MutableStateFlow<Image?>
     val imageProxyTaken: MutableStateFlow<ImageProxy?>
+    val imageLoadedFromUri: MutableStateFlow<Image?>
     val mediaImageList: MutableStateFlow<List<Image>>
 
     fun version(): AndroidVersion = AndroidVersion.ANDROID_9
@@ -31,10 +33,12 @@ interface AndroidHandler {
     fun requestPermissions(permissionStatusResult: PermissionStatusResult)
     fun requestStoragePermissions()
     fun requestCameraPermissions()
-    fun loadThumbnailFor(media: Image): Bitmap
-    fun loadBitmapFor(media: Image): Bitmap
+    fun loadMedia(uriPath: String, storage: Storage)
+    fun loadThumbnail(media: Image): Bitmap
+    fun loadBitmap(media: Image): Bitmap
+    fun loadBitmapExif(media: Image): BitmapExif?
     fun takePhoto(imageCapture: ImageCapture)
-    fun savePicture(bitmap: Bitmap, storage: Storage, name: String)
+    fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String)
     fun disposeCameraMembers()
 }
 
@@ -77,6 +81,11 @@ data class PermissionStatusResult(
     val isDenied: Boolean = false,
 )
 
-enum class Storage {
-    INTERNAL, EXTERNAL
+enum class Storage(val value: String) {
+    INTERNAL("0"), EXTERNAL("1")
 }
+
+data class StorageUri(
+    val uri: String,
+    val storage: Storage,
+)

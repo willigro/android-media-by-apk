@@ -2,7 +2,6 @@ package com.rittmann.mediacontrol.create
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.media.ExifInterface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
@@ -20,8 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -32,12 +33,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.exifinterface.media.ExifInterface
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rittmann.components.theme.AppTheme
 import com.rittmann.components.ui.SimpleTextField
 import com.rittmann.components.ui.TextBody
 import com.rittmann.core.android.Storage
+import com.rittmann.core.android.StorageUri
+import com.rittmann.core.data.BitmapExif
+import com.rittmann.core.data.Image
 import com.rittmann.core.extensions.applyRandomFilter
 import com.rittmann.core.extensions.getCameraProvider
 import com.rittmann.core.extensions.toBitmapExif
@@ -48,26 +53,41 @@ import kotlinx.coroutines.flow.StateFlow
 @Composable
 fun CreateMediaScreenRoot(
     navController: NavController,
+    storageUri: StorageUri? = null,
     createMediaViewModel: CreateMediaViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) {
+        createMediaViewModel.loadUri(storageUri)
+    }
+
     val uiState = createMediaViewModel.uiState.collectAsState().value
 
     track("Stating=$uiState")
 
     when (uiState) {
         is CameraUiState.TakePicture -> CameraView(viewModel = createMediaViewModel)
-        is CameraUiState.ShowPicture -> TakenImage(
+        is CameraUiState.ShowNewPicture -> TakenImage(
             uiState = uiState,
             takeAgain = createMediaViewModel::takeAgain,
             saveImage = createMediaViewModel::saveImage,
             name = createMediaViewModel.name,
             setName = createMediaViewModel::setName,
         )
+
+        is CameraUiState.ShowOldPicture -> OldImage(
+            uiState = uiState,
+            loadBitmapExif = createMediaViewModel::loadBitmapExif,
+            saveImage = createMediaViewModel::saveImage,
+            name = createMediaViewModel.name,
+            setName = createMediaViewModel::setName,
+        )
+
         is CameraUiState.Saved -> {
             LaunchedEffect(Unit) {
                 navController.popBackStack()
             }
         }
+
         else -> {
             TextBody(
                 text = "Loading info",
@@ -128,20 +148,19 @@ fun CameraView(
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
 fun TakenImage(
-    uiState: CameraUiState.ShowPicture,
+    uiState: CameraUiState.ShowNewPicture,
     takeAgain: () -> Unit,
-    saveImage: (Bitmap, Storage) -> Unit,
+    saveImage: (BitmapExif, Storage) -> Unit,
     name: StateFlow<String>,
-    setName: (String) -> Unit
+    setName: (String) -> Unit,
 ) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val showSaveButton = remember {
             mutableStateOf(false)
         }
 
-        val bitmapExif = uiState.image.image?.toBitmapExif()
-        val bitmap = remember {
-            mutableStateOf(bitmapExif?.bitmap)
+        var bitmapExif by remember {
+            mutableStateOf(uiState.image.image?.toBitmapExif())
         }
 
         val (
@@ -164,7 +183,7 @@ fun TakenImage(
             }
         ) {
             ImageContainer(
-                bitmap = bitmap,
+                bitmap = bitmapExif?.bitmap,
                 takeAgain = takeAgain,
                 showSaveButton = showSaveButton,
             )
@@ -195,7 +214,8 @@ fun TakenImage(
             Column(modifier = Modifier.wrapContentSize()) {
                 Button(
                     onClick = {
-                        bitmap.value = bitmap.value?.applyRandomFilter()
+                        bitmapExif =
+                            bitmapExif?.copy(bitmap = bitmapExif?.bitmap?.applyRandomFilter())
                     }
                 ) {
                     TextBody(text = "Apply filter")
@@ -234,7 +254,7 @@ fun TakenImage(
                     Button(
                         modifier = Modifier.weight(AppTheme.floats.sameWeight),
                         onClick = {
-                            bitmap.value?.let { saveImage(it, Storage.INTERNAL) }
+                            bitmapExif?.let { saveImage(it, Storage.INTERNAL) }
                         }
                     ) {
                         TextBody(text = "Save Internal")
@@ -243,7 +263,7 @@ fun TakenImage(
                     Button(
                         modifier = Modifier.weight(AppTheme.floats.sameWeight),
                         onClick = {
-                            bitmap.value?.let { saveImage(it, Storage.EXTERNAL) }
+                            bitmapExif?.let { saveImage(it, Storage.EXTERNAL) }
                         }
                     ) {
                         TextBody(text = "Save External")
@@ -255,19 +275,121 @@ fun TakenImage(
 }
 
 @Composable
+fun OldImage(
+    uiState: CameraUiState.ShowOldPicture,
+    loadBitmapExif: (media: Image) -> BitmapExif?,
+    saveImage: (BitmapExif, Storage) -> Unit,
+    name: StateFlow<String>,
+    setName: (String) -> Unit,
+) {
+    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+        val bitmapExif = loadBitmapExif(uiState.image)
+
+        val bitmap = remember {
+            mutableStateOf(bitmapExif?.bitmap)
+        }
+
+        val (
+            containerImage,
+            infoContainer,
+            buttonSave,
+        ) = createRefs()
+
+        val middleGuideline = createGuidelineFromTop(0.5f)
+
+        Box(
+            contentAlignment = Alignment.BottomCenter,
+            modifier = Modifier.constrainAs(containerImage) {
+                top.linkTo(parent.top)
+                bottom.linkTo(middleGuideline)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+                height = Dimension.fillToConstraints
+            }
+        ) {
+            if (bitmap.value != null) {
+                Image(
+                    bitmap = bitmap.value!!.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .constrainAs(infoContainer) {
+                    top.linkTo(containerImage.bottom)
+                    bottom.linkTo(buttonSave.top)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    height = Dimension.fillToConstraints
+                }
+        ) {
+            Column(modifier = Modifier.wrapContentSize()) {
+                ImageName(modifier = Modifier, name = name, setName = setName)
+
+                bitmapExif?.exifInterface?.also { exifInterface ->
+                    TextBody(
+                        text = exifInterface.getAttribute(ExifInterface.TAG_DATETIME).toString()
+                    )
+                    TextBody(
+                        text = exifInterface.getAttribute(ExifInterface.TAG_ORIENTATION).toString()
+                    )
+                    TextBody(
+                        text = exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH).toString()
+                    )
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier.constrainAs(buttonSave) {
+                bottom.linkTo(parent.bottom)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = AppTheme.dimensions.paddingTopBetweenComponentsMedium),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                    onClick = {
+                    }
+                ) {
+                    TextBody(text = "Save")
+                }
+
+                Button(
+                    modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                    onClick = {
+                    }
+                ) {
+                    TextBody(text = "Delete")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun ImageContainer(
-    bitmap: MutableState<Bitmap?>,
+    bitmap: Bitmap?,
     takeAgain: () -> Unit,
     showSaveButton: MutableState<Boolean>,
 ) {
-    track(bitmap)
-    if (bitmap.value == null) {
+    if (bitmap == null) {
         takeAgain()
     } else {
         showSaveButton.value = true
 
         Image(
-            bitmap = bitmap.value!!.asImageBitmap(),
+            bitmap = bitmap.asImageBitmap(),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
         )

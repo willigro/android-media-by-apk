@@ -1,16 +1,17 @@
 package com.rittmann.mediacontrol.create
 
-import android.graphics.Bitmap
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rittmann.core.android.AndroidHandler
 import com.rittmann.core.android.Storage
+import com.rittmann.core.android.StorageUri
+import com.rittmann.core.data.BitmapExif
+import com.rittmann.core.data.Image
 import com.rittmann.core.tracker.track
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,23 +29,19 @@ class CreateMediaViewModel @Inject constructor(
     val uiState: StateFlow<CameraUiState>
         get() = _uiState
 
-    private var jobCameraIsAvailable: Job? = null
-    private var jobImageSaved: Job? = null
-    private var jobImageProxyTaken: Job? = null
-
     private val _name = MutableStateFlow("")
     val name = _name.asStateFlow()
 
     init {
         androidHandler.requestCameraPermissions()
 
-        jobCameraIsAvailable = viewModelScope.launch {
+        viewModelScope.launch {
             androidHandler.cameraIsAvailable.collectLatest {
                 _uiState.value = CameraUiState.TakePicture
             }
         }
 
-        jobImageSaved = viewModelScope.launch {
+        viewModelScope.launch {
             androidHandler.imageSaved.collectLatest { image ->
                 image?.also {
                     _uiState.value = CameraUiState.Saved
@@ -52,13 +49,27 @@ class CreateMediaViewModel @Inject constructor(
             }
         }
 
-        jobImageProxyTaken = viewModelScope.launch {
+        viewModelScope.launch {
             androidHandler.imageProxyTaken.collectLatest { imageProxy ->
                 imageProxy?.also {
-                    _uiState.value = CameraUiState.ShowPicture(imageProxy)
+                    _uiState.value = CameraUiState.ShowNewPicture(imageProxy)
                 }
             }
         }
+
+        viewModelScope.launch {
+            androidHandler.imageLoadedFromUri.collectLatest { image ->
+                image?.also {
+                    _uiState.value = CameraUiState.ShowOldPicture(image)
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        track()
+        super.onCleared()
+        androidHandler.disposeCameraMembers()
     }
 
     fun setName(name: String) {
@@ -75,18 +86,18 @@ class CreateMediaViewModel @Inject constructor(
         _uiState.value = CameraUiState.TakePicture
     }
 
-    fun saveImage(bitmap: Bitmap, storage: Storage) {
-        androidHandler.savePicture(bitmap, storage, _name.value)
+    fun saveImage(bitmapExif: BitmapExif, storage: Storage) {
+        androidHandler.savePicture(bitmapExif, storage, _name.value)
     }
 
-    override fun onCleared() {
-        track()
-        super.onCleared()
-        androidHandler.disposeCameraMembers()
+    fun loadBitmapExif(media: Image): BitmapExif? {
+        return androidHandler.loadBitmapExif(media)
+    }
 
-        jobCameraIsAvailable?.cancel()
-        jobImageSaved?.cancel()
-        jobImageProxyTaken?.cancel()
+    fun loadUri(storageUri: StorageUri?) {
+        storageUri?.also {
+            androidHandler.loadMedia(storageUri.uri, storageUri.storage)
+        }
     }
 }
 
@@ -94,5 +105,6 @@ sealed class CameraUiState {
     object Start : CameraUiState()
     object Saved : CameraUiState()
     object TakePicture : CameraUiState()
-    class ShowPicture(val image: ImageProxy) : CameraUiState()
+    class ShowNewPicture(val image: ImageProxy) : CameraUiState()
+    class ShowOldPicture(val image: Image) : CameraUiState()
 }

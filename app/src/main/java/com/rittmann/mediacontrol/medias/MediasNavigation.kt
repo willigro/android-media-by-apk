@@ -3,9 +3,10 @@ package com.rittmann.mediacontrol.medias
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.rittmann.core.android.Storage
+import com.rittmann.core.android.StorageUri
 import com.rittmann.mediacontrol.create.CreateMediaScreenRoot
 import com.rittmann.mediacontrol.navigation.Navigation
-import java.util.concurrent.ExecutorService
 
 
 fun NavGraphBuilder.mediaGraph(navController: NavController) {
@@ -14,5 +15,22 @@ fun NavGraphBuilder.mediaGraph(navController: NavController) {
     }
     composable(Navigation.Create.destination) {
         CreateMediaScreenRoot(navController = navController)
+    }
+    composable(Navigation.Update.destination) { backStackEntry ->
+
+        val uri = backStackEntry.arguments?.getString(Navigation.Update.URI)
+        val storage = backStackEntry.arguments?.getString(Navigation.Update.STORAGE)
+
+        val storageUri = if (uri == null || storage == null) null else {
+            StorageUri(
+                uri = uri.replace("*", "/"),
+                storage = Storage.values().first { it.value == storage },
+            )
+        }
+
+        CreateMediaScreenRoot(
+            navController = navController,
+            storageUri = storageUri,
+        )
     }
 }
