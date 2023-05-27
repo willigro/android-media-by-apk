@@ -37,7 +37,7 @@ class Android11Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun loadMedia(uriPath: String, storage: Storage) {
+    override fun loadMedia(storageUri: StorageUri) {
         TODO("Not yet implemented")
     }
 

@@ -27,7 +27,6 @@ import com.rittmann.components.ui.TextBody
 import com.rittmann.components.ui.TextH1
 import com.rittmann.components.ui.TextH2
 import com.rittmann.core.android.AndroidVersion
-import com.rittmann.core.android.Storage
 import com.rittmann.core.data.Image
 import com.rittmann.mediacontrol.navigation.Navigation
 
@@ -148,8 +147,10 @@ fun MediasList(
                     .fillMaxWidth()
                     .clickable {
                         navController.navigate(
-                            // TODO storage
-                            Navigation.Update.transformDestination(media.uri.toString(), Storage.INTERNAL)
+                            Navigation.Update.transformDestination(
+                                media.uri.toString(),
+                                media.storage,
+                            )
                         )
                     },
             ) {

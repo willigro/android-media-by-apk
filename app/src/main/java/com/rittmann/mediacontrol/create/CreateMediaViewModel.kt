@@ -98,7 +98,7 @@ class CreateMediaViewModel @Inject constructor(
 
     fun loadUri(storageUri: StorageUri?) {
         storageUri?.also {
-            androidHandler.loadMedia(storageUri.uri, storageUri.storage)
+            androidHandler.loadMedia(storageUri)
         }
     }
 }

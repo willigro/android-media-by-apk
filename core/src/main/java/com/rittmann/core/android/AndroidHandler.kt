@@ -33,7 +33,7 @@ interface AndroidHandler {
     fun requestPermissions(permissionStatusResult: PermissionStatusResult)
     fun requestStoragePermissions()
     fun requestCameraPermissions()
-    fun loadMedia(uriPath: String, storage: Storage)
+    fun loadMedia(storageUri: StorageUri)
     fun loadThumbnail(media: Image): Bitmap
     fun loadBitmap(media: Image): Bitmap
     fun loadBitmapExif(media: Image): BitmapExif?
