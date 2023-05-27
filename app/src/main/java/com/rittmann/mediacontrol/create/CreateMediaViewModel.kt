@@ -60,6 +60,8 @@ class CreateMediaViewModel @Inject constructor(
         viewModelScope.launch {
             androidHandler.imageLoadedFromUri.collectLatest { image ->
                 image?.also {
+                    _name.value = image.name
+
                     _uiState.value = CameraUiState.ShowOldPicture(image)
                 }
             }

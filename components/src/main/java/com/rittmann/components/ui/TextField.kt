@@ -1,24 +1,17 @@
 package com.rittmann.components.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusEvent
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import com.rittmann.components.R
 import com.rittmann.components.theme.AppShapes
 import com.rittmann.components.theme.AppTheme
 import kotlinx.coroutines.launch
@@ -47,7 +40,7 @@ fun SimpleTextField(
             },
         value = text,
         colors = TextFieldDefaults.outlinedTextFieldColors(
-            textColor = AppTheme.colors.textSecondary,
+            textColor = AppTheme.colors.textPrimary,
             focusedBorderColor = AppTheme.colors.primary,
             unfocusedBorderColor = AppTheme.colors.primary,
         ),
