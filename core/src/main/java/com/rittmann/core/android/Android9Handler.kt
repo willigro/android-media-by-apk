@@ -407,6 +407,7 @@ class Android9Handler(
         imageProxyTaken.value = null
         imageSaved.value = null
         imageLoadedFromUri.value = null
+        mediaDeleted.value = null
     }
 
     private fun getRealExternalPathFromUri(context: Context, contentUri: Uri): String? {
