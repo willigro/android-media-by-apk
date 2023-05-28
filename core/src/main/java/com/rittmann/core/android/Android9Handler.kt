@@ -341,6 +341,71 @@ class Android9Handler(
         }
     }
 
+    override fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, name: String) {
+        when (storageUri.storage) {
+            Storage.INTERNAL -> {
+                val file = File(Uri.parse(storageUri.uri).path!!)
+
+                val newFile = generateInternalFileToSave(
+                    if (name.contains(".")) {
+                        name.split(".")[0]
+                    } else {
+                        name
+                    }
+                )
+
+                file.renameTo(newFile)
+
+                val path = bitmapExif.bitmap?.saveTo(newFile)
+
+                Exif.saveExif(bitmapExif.exifInterface, path)
+
+                if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
+                    execute(lastExecution)
+                }
+
+                Image(
+                    uri = Uri.fromFile(file),
+                    name = newFile.name,
+                    id = null,
+                    storage = storageUri.storage,
+                ).apply {
+                    imageSaved.tryEmit(this)
+                }
+            }
+
+            Storage.EXTERNAL -> {
+//                val file = generateExternalFileToSave(name)
+//
+//                val savedPath = bitmapExif.bitmap?.saveTo(file)
+//
+//                Exif.saveExif(bitmapExif.exifInterface, savedPath)
+//
+//                MediaScannerConnection.scanFile(
+//                    context,
+//                    arrayOf(file.toString()),
+//                    null
+//                ) { path, uri ->
+//                    track("path=$path, uri=$uri, ${Uri.fromFile(file)}")
+//
+//                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+//                        execute(lastExecution)
+//                    }
+//
+//                    Image(
+//                        uri = uri,
+//                        name = file.name,
+//                        id = null,
+//                        storage = storage,
+//                    ).apply {
+//                        track("Saving image=$this")
+//                        imageSaved.tryEmit(this)
+//                    }
+//                }
+            }
+        }
+    }
+
     override fun deleteImage(media: Image) {
         track(media)
         if (media.uri.path == null) return

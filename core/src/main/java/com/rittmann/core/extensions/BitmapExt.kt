@@ -18,7 +18,7 @@ fun Bitmap.saveTo(file: File): String? {
         e.printStackTrace()
     } finally {
         try {
-            fos!!.close()
+            fos?.close()
         } catch (e: IOException) {
             track(e)
             e.printStackTrace()

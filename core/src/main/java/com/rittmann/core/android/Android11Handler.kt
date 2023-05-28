@@ -64,6 +64,10 @@ class Android11Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
+    override fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, name: String) {
+        TODO("Not yet implemented")
+    }
+
     override fun deleteImage(media: Image) {
         TODO("Not yet implemented")
     }

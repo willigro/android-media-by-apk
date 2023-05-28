@@ -81,7 +81,7 @@ fun CreateMediaScreenRoot(
         is CameraUiState.ShowOldPicture -> OldImage(
             uiState = uiState,
             loadBitmapExif = createMediaViewModel::loadBitmapExif,
-            saveImage = createMediaViewModel::saveImage,
+            updateImage = createMediaViewModel::updateImage,
             deleteImage = createMediaViewModel::deleteImage,
             name = createMediaViewModel.name,
             setName = createMediaViewModel::setName,
@@ -219,8 +219,9 @@ fun TakenImage(
             Column(modifier = Modifier.wrapContentSize()) {
                 Button(
                     onClick = {
-                        bitmapExif =
-                            bitmapExif?.copy(bitmap = bitmapExif?.bitmap?.applyRandomFilter())
+                        bitmapExif = bitmapExif?.copy(
+                            bitmap = bitmapExif?.bitmap?.applyRandomFilter()
+                        )
                     }
                 ) {
                     TextBody(text = "Apply filter")
@@ -283,16 +284,14 @@ fun TakenImage(
 fun OldImage(
     uiState: CameraUiState.ShowOldPicture,
     loadBitmapExif: (media: Image) -> BitmapExif?,
-    saveImage: (BitmapExif, Storage) -> Unit,
+    updateImage: (BitmapExif) -> Unit,
     deleteImage: (Image) -> Unit,
     name: StateFlow<String>,
     setName: (String) -> Unit,
 ) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-        val bitmapExif = loadBitmapExif(uiState.image)
-
-        val bitmap = remember {
-            mutableStateOf(bitmapExif?.bitmap)
+        var bitmapExif by remember {
+            mutableStateOf(loadBitmapExif(uiState.image))
         }
 
         val (
@@ -313,9 +312,9 @@ fun OldImage(
                 height = Dimension.fillToConstraints
             }
         ) {
-            if (bitmap.value != null) {
+            if (bitmapExif?.bitmap != null) {
                 Image(
-                    bitmap = bitmap.value!!.asImageBitmap(),
+                    bitmap = bitmapExif?.bitmap!!.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -334,6 +333,16 @@ fun OldImage(
                 }
         ) {
             Column(modifier = Modifier.wrapContentSize()) {
+                Button(
+                    onClick = {
+                        bitmapExif = bitmapExif?.copy(
+                            bitmap = bitmapExif?.bitmap?.applyRandomFilter()
+                        )
+                    }
+                ) {
+                    TextBody(text = "Apply filter")
+                }
+
                 ImageName(modifier = Modifier, name = name, setName = setName)
 
                 bitmapExif?.exifInterface?.also { exifInterface ->
@@ -366,6 +375,7 @@ fun OldImage(
                 Button(
                     modifier = Modifier.weight(AppTheme.floats.sameWeight),
                     onClick = {
+                        bitmapExif?.let { updateImage(it) }
                     }
                 ) {
                     TextBody(text = "Save")

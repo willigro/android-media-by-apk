@@ -31,6 +31,8 @@ class CreateMediaViewModel @Inject constructor(
     private val _name = MutableStateFlow("")
     val name = _name.asStateFlow()
 
+    private var createMediaScreenArguments: CreateMediaScreenArguments? = null
+
     init {
         androidHandler.requestCameraPermissions()
 
@@ -99,6 +101,12 @@ class CreateMediaViewModel @Inject constructor(
         androidHandler.savePicture(bitmapExif, storage, _name.value)
     }
 
+    fun updateImage(bitmapExif: BitmapExif) {
+        createMediaScreenArguments?.storageUri?.also { storageUri ->
+            androidHandler.updateImage(bitmapExif, storageUri, _name.value)
+        }
+    }
+
     fun deleteImage(media: Image) {
         track()
         androidHandler.deleteImage(media)
@@ -109,6 +117,8 @@ class CreateMediaViewModel @Inject constructor(
     }
 
     fun loadUri(createMediaScreenArguments: CreateMediaScreenArguments?) {
+        this.createMediaScreenArguments = createMediaScreenArguments
+
         createMediaScreenArguments?.also {
             if (createMediaScreenArguments.storageUri != null) {
                 androidHandler.loadMedia(
