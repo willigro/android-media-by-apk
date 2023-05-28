@@ -19,6 +19,7 @@ class Android10Handler: AndroidHandler {
     override val imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
     override val imageLoadedFromUri: MutableStateFlow<Image?> = MutableStateFlow(null)
     override val mediaImageList: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
+    override val mediaDeleted: MutableStateFlow<Image?> = MutableStateFlow(null)
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_10
     override fun registerPermissions(componentActivity: ComponentActivity) {
@@ -37,7 +38,7 @@ class Android10Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun loadMedia(storageUri: StorageUri) {
+    override fun loadMedia(storageUri: StorageUri, mediaId: Long?) {
         TODO("Not yet implemented")
     }
 
@@ -60,6 +61,10 @@ class Android10Handler: AndroidHandler {
     }
 
     override fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String) {
+        TODO("Not yet implemented")
+    }
+
+    override fun deleteImage(media: Image) {
         TODO("Not yet implemented")
     }
 

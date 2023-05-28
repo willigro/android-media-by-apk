@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.rittmann.core.android.Storage
 import com.rittmann.core.android.StorageUri
+import com.rittmann.mediacontrol.create.CreateMediaScreenArguments
 import com.rittmann.mediacontrol.create.CreateMediaScreenRoot
 import com.rittmann.mediacontrol.navigation.Navigation
 
@@ -20,6 +21,7 @@ fun NavGraphBuilder.mediaGraph(navController: NavController) {
 
         val uri = backStackEntry.arguments?.getString(Navigation.Update.URI)
         val storage = backStackEntry.arguments?.getString(Navigation.Update.STORAGE)
+        val mediaId = backStackEntry.arguments?.getString(Navigation.Update.MEDIA_ID)
 
         val storageUri = if (uri == null || storage == null) null else {
             StorageUri(
@@ -30,7 +32,10 @@ fun NavGraphBuilder.mediaGraph(navController: NavController) {
 
         CreateMediaScreenRoot(
             navController = navController,
-            storageUri = storageUri,
+            createMediaScreenArguments = CreateMediaScreenArguments(
+                storageUri = storageUri,
+                mediaId = mediaId?.toLongOrNull(),
+            ),
         )
     }
 }

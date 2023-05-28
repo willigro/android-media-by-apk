@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rittmann.core.android.AndroidHandler
 import com.rittmann.core.android.Storage
-import com.rittmann.core.android.StorageUri
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
 import com.rittmann.core.tracker.track
@@ -66,6 +65,14 @@ class CreateMediaViewModel @Inject constructor(
                 }
             }
         }
+
+        viewModelScope.launch {
+            androidHandler.mediaDeleted.collectLatest { image ->
+                image?.also {
+                    _uiState.value = CameraUiState.Deleted
+                }
+            }
+        }
     }
 
     override fun onCleared() {
@@ -92,13 +99,23 @@ class CreateMediaViewModel @Inject constructor(
         androidHandler.savePicture(bitmapExif, storage, _name.value)
     }
 
+    fun deleteImage(media: Image) {
+        track()
+        androidHandler.deleteImage(media)
+    }
+
     fun loadBitmapExif(media: Image): BitmapExif? {
         return androidHandler.loadBitmapExif(media)
     }
 
-    fun loadUri(storageUri: StorageUri?) {
-        storageUri?.also {
-            androidHandler.loadMedia(storageUri)
+    fun loadUri(createMediaScreenArguments: CreateMediaScreenArguments?) {
+        createMediaScreenArguments?.also {
+            if (createMediaScreenArguments.storageUri != null) {
+                androidHandler.loadMedia(
+                    createMediaScreenArguments.storageUri,
+                    createMediaScreenArguments.mediaId,
+                )
+            }
         }
     }
 }
@@ -106,6 +123,7 @@ class CreateMediaViewModel @Inject constructor(
 sealed class CameraUiState {
     object Start : CameraUiState()
     object Saved : CameraUiState()
+    object Deleted : CameraUiState()
     object TakePicture : CameraUiState()
     class ShowNewPicture(val image: ImageProxy) : CameraUiState()
     class ShowOldPicture(val image: Image) : CameraUiState()

@@ -22,6 +22,7 @@ interface AndroidHandler {
     val imageProxyTaken: MutableStateFlow<ImageProxy?>
     val imageLoadedFromUri: MutableStateFlow<Image?>
     val mediaImageList: MutableStateFlow<List<Image>>
+    val mediaDeleted: MutableStateFlow<Image?>
 
     fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
@@ -33,12 +34,13 @@ interface AndroidHandler {
     fun requestPermissions(permissionStatusResult: PermissionStatusResult)
     fun requestStoragePermissions()
     fun requestCameraPermissions()
-    fun loadMedia(storageUri: StorageUri)
+    fun loadMedia(storageUri: StorageUri, mediaId: Long?)
     fun loadThumbnail(media: Image): Bitmap
     fun loadBitmap(media: Image): Bitmap
     fun loadBitmapExif(media: Image): BitmapExif?
     fun takePhoto(imageCapture: ImageCapture)
     fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String)
+    fun deleteImage(media: Image)
     fun disposeCameraMembers()
 }
 

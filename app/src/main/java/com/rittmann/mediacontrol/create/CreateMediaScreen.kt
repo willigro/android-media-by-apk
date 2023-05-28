@@ -49,15 +49,19 @@ import com.rittmann.core.extensions.toBitmapExif
 import com.rittmann.core.tracker.track
 import kotlinx.coroutines.flow.StateFlow
 
+data class CreateMediaScreenArguments(
+    val storageUri: StorageUri? = null,
+    val mediaId: Long? = null,
+)
 
 @Composable
 fun CreateMediaScreenRoot(
     navController: NavController,
-    storageUri: StorageUri? = null,
+    createMediaScreenArguments: CreateMediaScreenArguments? = null,
     createMediaViewModel: CreateMediaViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(Unit) {
-        createMediaViewModel.loadUri(storageUri)
+        createMediaViewModel.loadUri(createMediaScreenArguments)
     }
 
     val uiState = createMediaViewModel.uiState.collectAsState().value
@@ -78,11 +82,12 @@ fun CreateMediaScreenRoot(
             uiState = uiState,
             loadBitmapExif = createMediaViewModel::loadBitmapExif,
             saveImage = createMediaViewModel::saveImage,
+            deleteImage = createMediaViewModel::deleteImage,
             name = createMediaViewModel.name,
             setName = createMediaViewModel::setName,
         )
 
-        is CameraUiState.Saved -> {
+        is CameraUiState.Saved, CameraUiState.Deleted -> {
             LaunchedEffect(Unit) {
                 navController.popBackStack()
             }
@@ -279,6 +284,7 @@ fun OldImage(
     uiState: CameraUiState.ShowOldPicture,
     loadBitmapExif: (media: Image) -> BitmapExif?,
     saveImage: (BitmapExif, Storage) -> Unit,
+    deleteImage: (Image) -> Unit,
     name: StateFlow<String>,
     setName: (String) -> Unit,
 ) {
@@ -368,6 +374,7 @@ fun OldImage(
                 Button(
                     modifier = Modifier.weight(AppTheme.floats.sameWeight),
                     onClick = {
+                        deleteImage(uiState.image)
                     }
                 ) {
                     TextBody(text = "Delete")

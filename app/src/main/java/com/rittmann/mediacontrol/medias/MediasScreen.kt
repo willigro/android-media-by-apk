@@ -150,6 +150,7 @@ fun MediasList(
                             Navigation.Update.transformDestination(
                                 media.uri.toString(),
                                 media.storage,
+                                media.id,
                             )
                         )
                     },

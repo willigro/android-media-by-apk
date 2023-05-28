@@ -65,6 +65,7 @@ class Android9Handler(
     override val imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
     override val imageLoadedFromUri: MutableStateFlow<Image?> = MutableStateFlow(null)
     override val mediaImageList: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
+    override val mediaDeleted: MutableStateFlow<Image?> = MutableStateFlow(null)
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
@@ -198,7 +199,7 @@ class Android9Handler(
         )
     }
 
-    override fun loadMedia(storageUri: StorageUri) {
+    override fun loadMedia(storageUri: StorageUri, mediaId: Long?) {
         Uri.parse(storageUri.uri)?.also { uri ->
             if (uri.path == null) return
 
@@ -206,28 +207,24 @@ class Android9Handler(
                 Storage.INTERNAL -> {
                     val file = File(uri.path!!)
 
-                    val media = Image(
+                    imageLoadedFromUri.value = Image(
                         uri = uri,
                         name = file.name,
-                        id = null,
+                        id = mediaId,
                         storage = storageUri.storage,
                     )
-
-                    imageLoadedFromUri.value = media
                 }
 
                 Storage.EXTERNAL -> {
-                    getRealPathFromUri(context, Uri.parse(storageUri.uri))?.also { path ->
+                    getRealExternalPathFromUri(context, uri)?.also { path ->
                         val file = File(path)
 
-                        val media = Image(
+                        imageLoadedFromUri.value = Image(
                             uri = Uri.fromFile(file),
                             name = file.name,
-                            id = null,
+                            id = mediaId,
                             storage = storageUri.storage,
                         )
-
-                        imageLoadedFromUri.value = media
                     }
                 }
             }
@@ -298,6 +295,10 @@ class Android9Handler(
 
                 Exif.saveExif(bitmapExif.exifInterface, path)
 
+                if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
+                    execute(lastExecution)
+                }
+
                 Image(
                     uri = Uri.fromFile(file),
                     name = file.name,
@@ -305,10 +306,6 @@ class Android9Handler(
                     storage = storage,
                 ).apply {
                     imageSaved.tryEmit(this)
-                }
-
-                if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
-                    execute(lastExecution)
                 }
             }
 
@@ -326,6 +323,10 @@ class Android9Handler(
                 ) { path, uri ->
                     track("path=$path, uri=$uri, ${Uri.fromFile(file)}")
 
+                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                        execute(lastExecution)
+                    }
+
                     Image(
                         uri = uri,
                         name = file.name,
@@ -335,9 +336,65 @@ class Android9Handler(
                         track("Saving image=$this")
                         imageSaved.tryEmit(this)
                     }
+                }
+            }
+        }
+    }
 
-                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+    override fun deleteImage(media: Image) {
+        track(media)
+        if (media.uri.path == null) return
+
+        when (media.storage) {
+            Storage.INTERNAL -> {
+                val file = File(media.uri.path!!)
+
+                if (file.exists()) {
+                    if (file.delete()) {
                         execute(lastExecution)
+
+                        mediaDeleted.value = media
+                    }
+                }
+            }
+
+            Storage.EXTERNAL -> {
+                val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+
+                val projection = arrayOf(
+                    MediaStore.Images.Media._ID,
+                    MediaStore.Images.Media.DISPLAY_NAME,
+                )
+
+                val selection = "${MediaStore.Images.Media._ID} = ?"
+                val selectionArgs = arrayOf(media.id.toString())
+
+                val query = context.contentResolver.query(
+                    collection,
+                    projection,
+                    selection,
+                    selectionArgs,
+                    null,
+                )
+
+                query?.use { cursor ->
+                    val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+
+                    if (cursor.moveToFirst()) {
+                        val id = cursor.getLong(idColumn)
+
+                        val contentUri: Uri = ContentUris.withAppendedId(
+                            collection,
+                            id
+                        )
+
+                        contentUri.path?.let {
+                            if (context.contentResolver.delete(contentUri, null, null) > 0) {
+                                execute(lastExecution)
+                            }
+
+                            mediaDeleted.value = media
+                        }
                     }
                 }
             }
@@ -352,7 +409,7 @@ class Android9Handler(
         imageLoadedFromUri.value = null
     }
 
-    private fun getRealPathFromUri(context: Context, contentUri: Uri): String? {
+    private fun getRealExternalPathFromUri(context: Context, contentUri: Uri): String? {
         var cursor: Cursor? = null
         return try {
             val proj = arrayOf(MediaStore.Images.Media.DATA)
