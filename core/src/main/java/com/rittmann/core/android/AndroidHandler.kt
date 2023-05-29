@@ -89,3 +89,31 @@ data class PermissionStatusResult(
 enum class Storage(val value: String) {
     INTERNAL("0"), EXTERNAL("1")
 }
+
+fun MutableStateFlow<List<Image>>.delete(image: Image) {
+    val list = this.value
+
+    val index = list.indexOfFirst { it.name == image.name }
+
+    if (index != -1) {
+        val arr = arrayListOf<Image>()
+        arr.addAll(list)
+        arr.removeAt(index)
+
+        this.value = arr
+    }
+}
+
+fun MutableStateFlow<List<Image>>.update(image: Image, predicate: (Image) -> Boolean) {
+    val list = this.value
+
+    val index = list.indexOfFirst(predicate)
+
+    if (index != -1) {
+        val arr = arrayListOf<Image>()
+        arr.addAll(list)
+        arr[index] = image
+
+        this.value = arr
+    }
+}

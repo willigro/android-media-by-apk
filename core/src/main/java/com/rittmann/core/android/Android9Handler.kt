@@ -32,6 +32,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.ExecutorService
+import kotlinx.coroutines.flow.MutableStateFlow
 
 
 class Android9Handler(
@@ -138,6 +139,7 @@ class Android9Handler(
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.DATA,
         )
 
         val selection = ""
@@ -159,10 +161,12 @@ class Android9Handler(
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val nameColumn =
                 cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val name = cursor.getString(nameColumn)
+                track(cursor.getString(dataColumn))
 
                 val contentUri: Uri = ContentUris.withAppendedId(
                     collection,
@@ -304,12 +308,12 @@ class Android9Handler(
                 scanFileAndNotifySavedImage(
                     file = file,
                     mediaId = null,
-                ) {
+                ) { image ->
                     if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
-                        mediaImageList.value += it
+                        mediaImageList.value += image
                     }
 
-                    imageSaved.tryEmit(it)
+                    imageSaved.tryEmit(image)
                 }
             }
         }
@@ -380,16 +384,8 @@ class Android9Handler(
                     storage = Storage.INTERNAL,
                 ).apply {
                     if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
-                        val list = mediaImageList.value
-
-                        val index = list.indexOfFirst { it.name == oldName }
-
-                        if (index != -1) {
-                            val arr = arrayListOf<Image>()
-                            arr.addAll(list)
-                            arr[index] = this
-
-                            mediaImageList.value = arr
+                        mediaImageList.update(this) {
+                            it.name == oldName
                         }
                     }
 
@@ -404,8 +400,8 @@ class Android9Handler(
                     MediaStore.Images.Media._ID,
                 )
 
-                val selection = "${MediaStore.Images.Media._ID} = ?"
-                val selectionArgs = arrayOf(storageUri.mediaId.toString())
+                val selection = "${MediaStore.Images.Media.DATA} = ?"
+                val selectionArgs = arrayOf(uri.path!!)
 
                 val query = context.contentResolver.query(
                     collection,
@@ -442,22 +438,14 @@ class Android9Handler(
                                 scanFileAndNotifySavedImage(
                                     file = newFile,
                                     mediaId = storageUri.mediaId,
-                                ) {
+                                ) { image ->
                                     if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
-                                        val list = mediaImageList.value
-
-                                        val index = list.indexOfFirst { item -> item.id == it.id }
-
-                                        if (index != -1) {
-                                            val arr = arrayListOf<Image>()
-                                            arr.addAll(list)
-                                            arr[index] = it
-
-                                            mediaImageList.value = arr
+                                        mediaImageList.update(image) {
+                                            it.name == oldName
                                         }
                                     }
 
-                                    imageSaved.tryEmit(it)
+                                    imageSaved.tryEmit(image)
                                 }
                             }
                         }
@@ -473,10 +461,11 @@ class Android9Handler(
             arrayOf(file.toString()),
             null
         ) { path, uri ->
+            track("path=$path, uri=$uri")
             Image(
                 uri = uri,
                 name = file.name,
-                id = mediaId ?: getMediaId(file.name),
+                id = mediaId ?: getMediaId(path.orEmpty()),
                 storage = Storage.EXTERNAL,
             ).apply {
                 scanned(this)
@@ -495,17 +484,7 @@ class Android9Handler(
                 if (file.exists()) {
                     if (file.delete()) {
                         if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
-                            val list = mediaImageList.value
-
-                            val index = list.indexOfFirst { it.name == image.name }
-
-                            if (index != -1) {
-                                val arr = arrayListOf<Image>()
-                                arr.addAll(list)
-                                arr.removeAt(index)
-
-                                mediaImageList.value = arr
-                            }
+                            mediaImageList.delete(image)
                         }
 
                         mediaDeleted.value = image
@@ -545,17 +524,7 @@ class Android9Handler(
                         contentUri.path?.let {
                             if (context.contentResolver.delete(contentUri, null, null) > 0) {
                                 if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
-                                    val list = mediaImageList.value
-
-                                    val index = list.indexOfFirst { it.name == image.name }
-
-                                    if (index != -1) {
-                                        val arr = arrayListOf<Image>()
-                                        arr.addAll(list)
-                                        arr.removeAt(index)
-
-                                        mediaImageList.value = arr
-                                    }
+                                    mediaImageList.delete(image)
                                 }
 
                                 mediaDeleted.value = image
