@@ -28,13 +28,13 @@ interface AndroidHandler {
     fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
     // TODO make all implement it
-    fun loadInternalMedia() {}
-    fun loadExternalMedia() {}
 
     fun registerPermissions(componentActivity: ComponentActivity)
     fun requestPermissions(permissionStatusResult: PermissionStatusResult)
     fun requestStoragePermissions()
     fun requestCameraPermissions()
+    fun loadInternalMedia() {}
+    fun loadExternalMedia() {}
     fun loadImageFromUri(storageUri: StorageUri)
     fun loadThumbnail(image: Image): Bitmap
     fun loadBitmap(image: Image): Bitmap

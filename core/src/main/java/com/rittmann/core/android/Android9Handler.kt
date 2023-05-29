@@ -55,6 +55,37 @@ class Android9Handler(
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
+    override fun registerPermissions(componentActivity: ComponentActivity) {
+        registerLauncherStoragePermissions(componentActivity)
+        registerLauncherSettings(componentActivity)
+        registerLauncherCameraPermissions(componentActivity)
+    }
+
+    override fun requestPermissions(permissionStatusResult: PermissionStatusResult) {
+        track(permissionStatusResult)
+        when (permissionStatusResult.permission) {
+            in PERMISSIONS_STORAGE -> {
+                requestStoragePermissions()
+            }
+
+            PERMISSIONS_CAMERA -> {
+                requestCameraPermissions()
+            }
+        }
+    }
+
+    override fun requestStoragePermissions() {
+        activityResultLauncherPermissions?.launch(
+            PERMISSIONS_STORAGE.toTypedArray()
+        )
+    }
+
+    override fun requestCameraPermissions() {
+        activityResultLauncherCameraPermission?.launch(
+            PERMISSIONS_CAMERA
+        )
+    }
+
     override fun loadInternalMedia() {
         queueExecution.clear()
 
@@ -152,37 +183,6 @@ class Android9Handler(
         lastExecution = QueueExecution.RETRIEVE_EXTERNAL_MEDIA
 
         track(imageList)
-    }
-
-    override fun registerPermissions(componentActivity: ComponentActivity) {
-        registerLauncherStoragePermissions(componentActivity)
-        registerLauncherSettings(componentActivity)
-        registerLauncherCameraPermissions(componentActivity)
-    }
-
-    override fun requestPermissions(permissionStatusResult: PermissionStatusResult) {
-        track(permissionStatusResult)
-        when (permissionStatusResult.permission) {
-            in PERMISSIONS_STORAGE -> {
-                requestStoragePermissions()
-            }
-
-            PERMISSIONS_CAMERA -> {
-                requestCameraPermissions()
-            }
-        }
-    }
-
-    override fun requestStoragePermissions() {
-        activityResultLauncherPermissions?.launch(
-            PERMISSIONS_STORAGE.toTypedArray()
-        )
-    }
-
-    override fun requestCameraPermissions() {
-        activityResultLauncherCameraPermission?.launch(
-            PERMISSIONS_CAMERA
-        )
     }
 
     override fun loadImageFromUri(storageUri: StorageUri) {
