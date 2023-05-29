@@ -221,33 +221,33 @@ class Android9Handler(
         }
     }
 
-    override fun loadThumbnail(media: Image): Bitmap {
-        track(media)
+    override fun loadThumbnail(image: Image): Bitmap {
+        track(image)
 
-        if (media.id == null) {
-            return loadBitmap(media)
+        if (image.id == null) {
+            return loadBitmap(image)
         }
 
         return MediaStore.Images.Thumbnails.getThumbnail(
             context.contentResolver,
-            media.id,
+            image.id,
             MediaStore.Images.Thumbnails.MINI_KIND,
             null,
         )
     }
 
-    override fun loadBitmap(media: Image): Bitmap {
-        return loadBitmap(media.uri)
+    override fun loadBitmap(image: Image): Bitmap {
+        return loadBitmap(image.uri)
     }
 
-    override fun loadBitmapExif(media: Image): BitmapExif? {
+    override fun loadBitmapExif(image: Image): BitmapExif? {
         return try {
-            if (media.uri.path == null) return null
+            if (image.uri.path == null) return null
 
-            val exifInterface = ExifInterface(File(media.uri.path!!))
+            val exifInterface = ExifInterface(File(image.uri.path!!))
 
             BitmapExif(
-                bitmap = Exif.fixBitmapOrientation(exifInterface, loadBitmap(media.uri)),
+                bitmap = Exif.fixBitmapOrientation(exifInterface, loadBitmap(image.uri)),
                 exifInterface = exifInterface,
             )
         } catch (e: IOException) {
@@ -451,19 +451,19 @@ class Android9Handler(
         }
     }
 
-    override fun deleteImage(media: Image) {
-        track(media)
-        if (media.uri.path == null) return
+    override fun deleteImage(image: Image) {
+        track(image)
+        if (image.uri.path == null) return
 
-        when (media.storage) {
+        when (image.storage) {
             Storage.INTERNAL -> {
-                val file = File(media.uri.path!!)
+                val file = File(image.uri.path!!)
 
                 if (file.exists()) {
                     if (file.delete()) {
                         execute(lastExecution)
 
-                        mediaDeleted.value = media
+                        mediaDeleted.value = image
                     }
                 }
             }
@@ -476,7 +476,7 @@ class Android9Handler(
                 )
 
                 val selection = "${MediaStore.Images.Media._ID} = ?"
-                val selectionArgs = arrayOf(media.id.toString())
+                val selectionArgs = arrayOf(image.id.toString())
 
                 val query = context.contentResolver.query(
                     collection,
@@ -502,7 +502,7 @@ class Android9Handler(
                                 execute(lastExecution)
                             }
 
-                            mediaDeleted.value = media
+                            mediaDeleted.value = image
                         }
                     }
                 }

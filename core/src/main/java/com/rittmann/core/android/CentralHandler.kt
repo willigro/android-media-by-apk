@@ -46,15 +46,15 @@ open class CentralHandler : AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun loadThumbnail(media: Image): Bitmap {
+    override fun loadThumbnail(image: Image): Bitmap {
         TODO("Not yet implemented")
     }
 
-    override fun loadBitmap(media: Image): Bitmap {
+    override fun loadBitmap(image: Image): Bitmap {
         TODO("Not yet implemented")
     }
 
-    override fun loadBitmapExif(media: Image): BitmapExif? {
+    override fun loadBitmapExif(image: Image): BitmapExif? {
         TODO("Not yet implemented")
     }
 
@@ -76,7 +76,7 @@ open class CentralHandler : AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun deleteImage(media: Image) {
+    override fun deleteImage(image: Image) {
         TODO("Not yet implemented")
     }
 

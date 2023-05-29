@@ -36,13 +36,13 @@ interface AndroidHandler {
     fun requestStoragePermissions()
     fun requestCameraPermissions()
     fun loadImageFromUri(storageUri: StorageUri)
-    fun loadThumbnail(media: Image): Bitmap
-    fun loadBitmap(media: Image): Bitmap
-    fun loadBitmapExif(media: Image): BitmapExif?
+    fun loadThumbnail(image: Image): Bitmap
+    fun loadBitmap(image: Image): Bitmap
+    fun loadBitmapExif(image: Image): BitmapExif?
     fun takePhoto(imageCapture: ImageCapture)
     fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String)
     fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, name: String)
-    fun deleteImage(media: Image)
+    fun deleteImage(image: Image)
     fun disposeCameraMembers()
 }
 
