@@ -54,11 +54,11 @@ open class CentralHandler(
         TODO("Not yet implemented")
     }
 
-    override fun loadThumbnail(image: Image): Bitmap {
+    override fun loadThumbnail(image: Image): Bitmap? {
         TODO("Not yet implemented")
     }
 
-    override fun loadBitmap(image: Image): Bitmap {
+    override fun loadBitmap(image: Image): Bitmap? {
         TODO("Not yet implemented")
     }
 

@@ -133,7 +133,7 @@ fun MediasList(
     modifier: Modifier,
     navController: NavController,
     uiState: MediasUiState,
-    loadBitmapFor: (media: Image) -> Bitmap,
+    loadBitmapFor: (media: Image) -> Bitmap?,
 ) {
     val list = uiState.mediaList.collectAsState().value
 
@@ -156,19 +156,22 @@ fun MediasList(
                     },
             ) {
                 val bitmap = loadBitmapFor(media)
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .height(AppTheme.dimensions.mediaDimens.thumbnailHeight),
-                )
 
-                TextBody(
-                    text = media.name.orEmpty(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = AppTheme.dimensions.paddingTopBetweenComponentsSmall),
-                )
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .height(AppTheme.dimensions.mediaDimens.thumbnailHeight),
+                    )
+
+                    TextBody(
+                        text = media.name.orEmpty(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = AppTheme.dimensions.paddingTopBetweenComponentsSmall),
+                    )
+                }
             }
         }
     }

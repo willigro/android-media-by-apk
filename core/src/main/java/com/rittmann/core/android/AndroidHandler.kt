@@ -37,8 +37,8 @@ interface AndroidHandler {
     fun loadInternalMedia() {}
     fun loadExternalMedia() {}
     fun loadImageBitmapExif(storageUri: StorageUri)
-    fun loadThumbnail(image: Image): Bitmap
-    fun loadBitmap(image: Image): Bitmap
+    fun loadThumbnail(image: Image): Bitmap?
+    fun loadBitmap(image: Image): Bitmap?
     fun loadBitmapExif(image: Image): BitmapExif?
     fun takePhoto(imageCapture: ImageCapture)
     fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String)

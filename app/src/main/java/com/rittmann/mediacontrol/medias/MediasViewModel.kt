@@ -34,7 +34,7 @@ class MediasViewModel @Inject constructor(
         }
     }
 
-    fun loadBitmapFor(media: Image): Bitmap {
+    fun loadBitmapFor(media: Image): Bitmap? {
         return androidHandler.loadThumbnail(media)
     }
 

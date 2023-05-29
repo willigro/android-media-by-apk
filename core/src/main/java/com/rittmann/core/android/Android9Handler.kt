@@ -29,6 +29,7 @@ import com.rittmann.core.extensions.arePermissionsGrated
 import com.rittmann.core.extensions.saveTo
 import com.rittmann.core.tracker.track
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 
@@ -208,22 +209,27 @@ class Android9Handler(
         )
     }
 
-    override fun loadThumbnail(image: Image): Bitmap {
+    override fun loadThumbnail(image: Image): Bitmap? {
         track(image)
 
-        if (image.id == null) {
-            return loadBitmap(image)
-        }
+        try {
+            if (image.id == null) {
+                return loadBitmap(image)
+            }
 
-        return MediaStore.Images.Thumbnails.getThumbnail(
-            context.contentResolver,
-            image.id,
-            MediaStore.Images.Thumbnails.MINI_KIND,
-            null,
-        )
+            return MediaStore.Images.Thumbnails.getThumbnail(
+                context.contentResolver,
+                image.id,
+                MediaStore.Images.Thumbnails.MINI_KIND,
+                null,
+            )
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+            return null
+        }
     }
 
-    override fun loadBitmap(image: Image): Bitmap {
+    override fun loadBitmap(image: Image): Bitmap? {
         return loadBitmap(image.uri)
     }
 
@@ -275,16 +281,16 @@ class Android9Handler(
                 Exif.saveExif(bitmapExif.exifInterface, path)
 
                 if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
-                    execute(lastExecution)
-                }
+                    Image(
+                        uri = Uri.fromFile(file),
+                        name = file.name,
+                        id = null,
+                        storage = storage,
+                    ).apply {
+                        imageSaved.tryEmit(this)
 
-                Image(
-                    uri = Uri.fromFile(file),
-                    name = file.name,
-                    id = null,
-                    storage = storage,
-                ).apply {
-                    imageSaved.tryEmit(this)
+                        mediaImageList.value += this
+                    }
                 }
             }
 
@@ -298,7 +304,44 @@ class Android9Handler(
                 scanFileAndNotifySavedImage(
                     file = file,
                     mediaId = null,
-                )
+                ) {
+                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                        mediaImageList.value += it
+                    }
+
+                    imageSaved.tryEmit(it)
+                }
+            }
+        }
+    }
+
+    private fun getMediaId(data: String): Long? {
+        track(data)
+        val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+        )
+
+        val selection = "${MediaStore.Images.Media.DATA} = ?"
+        val selectionArgs = arrayOf(data)
+
+        val query = context.contentResolver.query(
+            collection,
+            projection,
+            selection,
+            selectionArgs,
+            null,
+        )
+
+        return query?.use { cursor ->
+            track("cursor.count=${cursor.count}")
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+
+            if (cursor.moveToFirst()) {
+                cursor.getLong(idColumn)
+            } else {
+                null
             }
         }
     }
@@ -314,6 +357,8 @@ class Android9Handler(
 
         val file = File(uri.path!!)
 
+        val oldName = file.name
+
         val newFile = if (storageUri.storage == Storage.INTERNAL) {
             generateInternalFileToSave(name)
         } else {
@@ -328,16 +373,26 @@ class Android9Handler(
 
         when (storageUri.storage) {
             Storage.INTERNAL -> {
-                if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
-                    execute(lastExecution)
-                }
-
                 Image(
                     uri = Uri.fromFile(newFile),
                     name = newFile.name,
                     id = null,
                     storage = Storage.INTERNAL,
                 ).apply {
+                    if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
+                        val list = mediaImageList.value
+
+                        val index = list.indexOfFirst { it.name == oldName }
+
+                        if (index != -1) {
+                            val arr = arrayListOf<Image>()
+                            arr.addAll(list)
+                            arr[index] = this
+
+                            mediaImageList.value = arr
+                        }
+                    }
+
                     imageSaved.tryEmit(this)
                 }
             }
@@ -375,8 +430,8 @@ class Android9Handler(
                             if (context.contentResolver.update(
                                     contentUri,
                                     ContentValues().apply {
-                                        put(MediaStore.Images.Media.DISPLAY_NAME, newFile.name)
                                         put(MediaStore.Images.Media.DATA, path)
+                                        put(MediaStore.Images.Media.DISPLAY_NAME, newFile.name)
                                     },
                                     null,
                                     null
@@ -387,7 +442,23 @@ class Android9Handler(
                                 scanFileAndNotifySavedImage(
                                     file = newFile,
                                     mediaId = storageUri.mediaId,
-                                )
+                                ) {
+                                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                                        val list = mediaImageList.value
+
+                                        val index = list.indexOfFirst { item -> item.id == it.id }
+
+                                        if (index != -1) {
+                                            val arr = arrayListOf<Image>()
+                                            arr.addAll(list)
+                                            arr[index] = it
+
+                                            mediaImageList.value = arr
+                                        }
+                                    }
+
+                                    imageSaved.tryEmit(it)
+                                }
                             }
                         }
                     }
@@ -396,7 +467,7 @@ class Android9Handler(
         }
     }
 
-    private fun scanFileAndNotifySavedImage(file: File, mediaId: Long?) {
+    private fun scanFileAndNotifySavedImage(file: File, mediaId: Long?, scanned: (Image) -> Unit) {
         MediaScannerConnection.scanFile(
             context,
             arrayOf(file.toString()),
@@ -405,11 +476,10 @@ class Android9Handler(
             Image(
                 uri = uri,
                 name = file.name,
-                id = mediaId,
+                id = mediaId ?: getMediaId(file.name),
                 storage = Storage.EXTERNAL,
             ).apply {
-                track("Saving image=$this")
-                imageSaved.tryEmit(this)
+                scanned(this)
             }
         }
     }
@@ -424,7 +494,19 @@ class Android9Handler(
 
                 if (file.exists()) {
                     if (file.delete()) {
-                        execute(lastExecution)
+                        if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
+                            val list = mediaImageList.value
+
+                            val index = list.indexOfFirst { it.name == image.name }
+
+                            if (index != -1) {
+                                val arr = arrayListOf<Image>()
+                                arr.addAll(list)
+                                arr.removeAt(index)
+
+                                mediaImageList.value = arr
+                            }
+                        }
 
                         mediaDeleted.value = image
                     }
@@ -462,10 +544,22 @@ class Android9Handler(
 
                         contentUri.path?.let {
                             if (context.contentResolver.delete(contentUri, null, null) > 0) {
-                                execute(lastExecution)
-                            }
+                                if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                                    val list = mediaImageList.value
 
-                            mediaDeleted.value = image
+                                    val index = list.indexOfFirst { it.name == image.name }
+
+                                    if (index != -1) {
+                                        val arr = arrayListOf<Image>()
+                                        arr.addAll(list)
+                                        arr.removeAt(index)
+
+                                        mediaImageList.value = arr
+                                    }
+                                }
+
+                                mediaDeleted.value = image
+                            }
                         }
                     }
                 }
@@ -508,12 +602,17 @@ class Android9Handler(
         }
     }
 
-    private fun loadBitmap(uri: Uri): Bitmap {
+    private fun loadBitmap(uri: Uri): Bitmap? {
         track(uri)
-        return MediaStore.Images.Media.getBitmap(
-            context.contentResolver,
-            uri,
-        )
+        return try {
+            MediaStore.Images.Media.getBitmap(
+                context.contentResolver,
+                uri,
+            )
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+            null
+        }
     }
 
     private fun generateInternalFileToSave(name: String): File {
