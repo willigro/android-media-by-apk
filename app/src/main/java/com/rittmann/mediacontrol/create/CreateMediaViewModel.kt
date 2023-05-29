@@ -8,6 +8,7 @@ import com.rittmann.core.android.AndroidHandler
 import com.rittmann.core.android.Storage
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -31,7 +32,7 @@ class CreateMediaViewModel @Inject constructor(
     private val _name = MutableStateFlow("")
     val name = _name.asStateFlow()
 
-    private var createMediaScreenArguments: CreateMediaScreenArguments? = null
+    private var storageUri: StorageUri? = null
 
     init {
         androidHandler.requestCameraPermissions()
@@ -61,7 +62,7 @@ class CreateMediaViewModel @Inject constructor(
         viewModelScope.launch {
             androidHandler.imageLoadedFromUri.collectLatest { image ->
                 image?.also {
-                    _name.value = image.name
+                    _name.value = image.name.orEmpty()
 
                     _uiState.value = CameraUiState.ShowOldPicture(image)
                 }
@@ -102,8 +103,12 @@ class CreateMediaViewModel @Inject constructor(
     }
 
     fun updateImage(bitmapExif: BitmapExif) {
-        createMediaScreenArguments?.storageUri?.also { storageUri ->
-            androidHandler.updateImage(bitmapExif, storageUri, createMediaScreenArguments?.mediaId, _name.value)
+        storageUri?.also { storageUri ->
+            androidHandler.updateImage(
+                bitmapExif,
+                storageUri,
+                _name.value,
+            )
         }
     }
 
@@ -116,16 +121,11 @@ class CreateMediaViewModel @Inject constructor(
         return androidHandler.loadBitmapExif(media)
     }
 
-    fun loadUri(createMediaScreenArguments: CreateMediaScreenArguments?) {
-        this.createMediaScreenArguments = createMediaScreenArguments
+    fun loadUri(storageUri: StorageUri?) {
+        this.storageUri = storageUri
 
-        createMediaScreenArguments?.also {
-            if (createMediaScreenArguments.storageUri != null) {
-                androidHandler.loadMedia(
-                    createMediaScreenArguments.storageUri,
-                    createMediaScreenArguments.mediaId,
-                )
-            }
+        this.storageUri?.also {
+            androidHandler.loadImageFromUri(it)
         }
     }
 }

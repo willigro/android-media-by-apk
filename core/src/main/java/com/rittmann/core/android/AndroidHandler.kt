@@ -7,6 +7,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -34,13 +35,13 @@ interface AndroidHandler {
     fun requestPermissions(permissionStatusResult: PermissionStatusResult)
     fun requestStoragePermissions()
     fun requestCameraPermissions()
-    fun loadMedia(storageUri: StorageUri, mediaId: Long?)
+    fun loadImageFromUri(storageUri: StorageUri)
     fun loadThumbnail(media: Image): Bitmap
     fun loadBitmap(media: Image): Bitmap
     fun loadBitmapExif(media: Image): BitmapExif?
     fun takePhoto(imageCapture: ImageCapture)
     fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String)
-    fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, mediaId: Long?, name: String)
+    fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, name: String)
     fun deleteImage(media: Image)
     fun disposeCameraMembers()
 }
@@ -87,8 +88,3 @@ data class PermissionStatusResult(
 enum class Storage(val value: String) {
     INTERNAL("0"), EXTERNAL("1")
 }
-
-data class StorageUri(
-    val uri: String,
-    val storage: Storage,
-)

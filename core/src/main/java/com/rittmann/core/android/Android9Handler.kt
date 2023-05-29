@@ -18,11 +18,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageProxy
 import androidx.exifinterface.media.ExifInterface
 import com.rittmann.core.camera.CameraHandler
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.StorageUri
 import com.rittmann.core.exif.Exif
 import com.rittmann.core.extensions.arePermissionsGranted
 import com.rittmann.core.extensions.arePermissionsGrated
@@ -30,10 +30,7 @@ import com.rittmann.core.extensions.saveTo
 import com.rittmann.core.tracker.track
 import java.io.File
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.ExecutorService
-import kotlinx.coroutines.flow.MutableStateFlow
 
 
 class Android9Handler(
@@ -189,35 +186,36 @@ class Android9Handler(
         )
     }
 
-    override fun loadMedia(storageUri: StorageUri, mediaId: Long?) {
-        Uri.parse(storageUri.uri)?.also { uri ->
-            if (uri.path == null) return
+    override fun loadImageFromUri(storageUri: StorageUri) {
+        val uri = Uri.parse(storageUri.uri)
 
-            when (storageUri.storage) {
-                Storage.INTERNAL -> {
-                    val file = File(uri.path!!)
+        if (uri.path == null) return
+
+        when (storageUri.storage) {
+            Storage.INTERNAL -> {
+                val file = File(uri.path!!)
+
+                imageLoadedFromUri.value = Image(
+                    uri = uri,
+                    name = file.name,
+                    id = storageUri.mediaId,
+                    storage = Storage.INTERNAL,
+                )
+            }
+
+            Storage.EXTERNAL -> {
+                getRealExternalPathFromUri(context, uri)?.also { path ->
+                    val file = File(path)
+
+                    val uriFile = Uri.fromFile(file)
+                    track("Uri.fromFile(file)=${uriFile.path}, image.uri=${uri.path}")
 
                     imageLoadedFromUri.value = Image(
-                        uri = uri,
+                        uri = uriFile,
                         name = file.name,
-                        id = mediaId,
-                        storage = storageUri.storage,
+                        id = storageUri.mediaId,
+                        storage = Storage.INTERNAL,
                     )
-                }
-
-                Storage.EXTERNAL -> {
-                    getRealExternalPathFromUri(context, uri)?.also { path ->
-                        val file = File(path)
-
-                        track("uri.path=${uri.path}, file=${file}")
-
-                        imageLoadedFromUri.value = Image(
-                            uri = Uri.fromFile(file),
-                            name = file.name,
-                            id = mediaId,
-                            storage = storageUri.storage,
-                        )
-                    }
                 }
             }
         }
@@ -338,7 +336,6 @@ class Android9Handler(
     override fun updateImage(
         bitmapExif: BitmapExif,
         storageUri: StorageUri,
-        mediaId: Long?,
         name: String,
     ) {
         when (storageUri.storage) {
@@ -395,7 +392,7 @@ class Android9Handler(
                 )
 
                 val selection = "${MediaStore.Images.Media._ID} = ?"
-                val selectionArgs = arrayOf(mediaId.toString())
+                val selectionArgs = arrayOf(storageUri.mediaId.toString())
 
                 val query = context.contentResolver.query(
                     collection,
@@ -427,7 +424,7 @@ class Android9Handler(
                                     null
                                 ) > 0
                             ) {
-                                deleteThumbnail(mediaId, contentUri)
+                                deleteThumbnail(storageUri.mediaId, contentUri)
 
                                 MediaScannerConnection.scanFile(
                                     context,
@@ -439,7 +436,7 @@ class Android9Handler(
                                     Image(
                                         uri = contentUri,
                                         name = newName,
-                                        id = mediaId,
+                                        id = storageUri.mediaId,
                                         storage = Storage.EXTERNAL,
                                     ).apply {
                                         track("Saving image=$this")

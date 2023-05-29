@@ -164,7 +164,7 @@ fun MediasList(
                 )
 
                 TextBody(
-                    text = media.name,
+                    text = media.name.orEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = AppTheme.dimensions.paddingTopBetweenComponentsSmall),

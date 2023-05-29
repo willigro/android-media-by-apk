@@ -6,6 +6,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.StorageUri
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -38,7 +39,7 @@ class Android10Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun loadMedia(storageUri: StorageUri, mediaId: Long?) {
+    override fun loadImageFromUri(storageUri: StorageUri) {
         TODO("Not yet implemented")
     }
 
@@ -67,7 +68,6 @@ class Android10Handler: AndroidHandler {
     override fun updateImage(
         bitmapExif: BitmapExif,
         storageUri: StorageUri,
-        mediaId: Long?,
         name: String
     ) {
         TODO("Not yet implemented")

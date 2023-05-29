@@ -40,7 +40,7 @@ import com.rittmann.components.theme.AppTheme
 import com.rittmann.components.ui.SimpleTextField
 import com.rittmann.components.ui.TextBody
 import com.rittmann.core.android.Storage
-import com.rittmann.core.android.StorageUri
+import com.rittmann.core.data.StorageUri
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
 import com.rittmann.core.extensions.applyRandomFilter
@@ -49,19 +49,14 @@ import com.rittmann.core.extensions.toBitmapExif
 import com.rittmann.core.tracker.track
 import kotlinx.coroutines.flow.StateFlow
 
-data class CreateMediaScreenArguments(
-    val storageUri: StorageUri? = null,
-    val mediaId: Long? = null,
-)
-
 @Composable
 fun CreateMediaScreenRoot(
     navController: NavController,
-    createMediaScreenArguments: CreateMediaScreenArguments? = null,
+    storageUri: StorageUri? = null,
     createMediaViewModel: CreateMediaViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(Unit) {
-        createMediaViewModel.loadUri(createMediaScreenArguments)
+        createMediaViewModel.loadUri(storageUri)
     }
 
     val uiState = createMediaViewModel.uiState.collectAsState().value

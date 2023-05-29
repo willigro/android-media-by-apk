@@ -6,6 +6,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import java.text.SimpleDateFormat
 import java.util.*
@@ -41,7 +42,7 @@ open class CentralHandler : AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun loadMedia(storageUri: StorageUri, mediaId: Long?) {
+    override fun loadImageFromUri(storageUri: StorageUri) {
         TODO("Not yet implemented")
     }
 
@@ -70,7 +71,6 @@ open class CentralHandler : AndroidHandler {
     override fun updateImage(
         bitmapExif: BitmapExif,
         storageUri: StorageUri,
-        mediaId: Long?,
         name: String
     ) {
         TODO("Not yet implemented")
