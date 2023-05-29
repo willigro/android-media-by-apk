@@ -295,27 +295,10 @@ class Android9Handler(
 
                 Exif.saveExif(bitmapExif.exifInterface, savedPath)
 
-                MediaScannerConnection.scanFile(
-                    context,
-                    arrayOf(file.toString()),
-                    null
-                ) { path, uri ->
-                    track("path=$path, uri=$uri, ${Uri.fromFile(file)}")
-
-                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
-                        execute(lastExecution)
-                    }
-
-                    Image(
-                        uri = uri,
-                        name = file.name,
-                        id = null,
-                        storage = storage,
-                    ).apply {
-                        track("Saving image=$this")
-                        imageSaved.tryEmit(this)
-                    }
-                }
+                scanFileAndNotifySavedImage(
+                    file = file,
+                    mediaId = null,
+                )
             }
         }
     }
@@ -325,53 +308,41 @@ class Android9Handler(
         storageUri: StorageUri,
         name: String,
     ) {
+        val uri = uriToUriFile(
+            uri = Uri.parse(storageUri.uri)
+        ) ?: return
+
+        val file = File(uri.path!!)
+
+        val newFile = if (storageUri.storage == Storage.INTERNAL) {
+            generateInternalFileToSave(name)
+        } else {
+            generateExternalFileToSave(name)
+        }
+
+        file.renameTo(newFile)
+
+        val path = bitmapExif.bitmap?.saveTo(newFile)
+
+        Exif.saveExif(bitmapExif.exifInterface, path)
+
         when (storageUri.storage) {
             Storage.INTERNAL -> {
-                val file = File(Uri.parse(storageUri.uri).path!!)
-
-                val newFile = generateInternalFileToSave(
-                    if (name.contains(".")) {
-                        name.split(".")[0]
-                    } else {
-                        name
-                    }
-                )
-
-                file.renameTo(newFile)
-
-                val path = bitmapExif.bitmap?.saveTo(newFile)
-
-                Exif.saveExif(bitmapExif.exifInterface, path)
-
                 if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
                     execute(lastExecution)
                 }
 
                 Image(
-                    uri = Uri.fromFile(file),
+                    uri = Uri.fromFile(newFile),
                     name = newFile.name,
                     id = null,
-                    storage = Storage.EXTERNAL,
+                    storage = Storage.INTERNAL,
                 ).apply {
                     imageSaved.tryEmit(this)
                 }
             }
 
             Storage.EXTERNAL -> {
-                val file = File(getRealExternalPathFromUri(context, Uri.parse(storageUri.uri))!!)
-
-                val newFile = generateExternalFileToSave(
-                    name
-                )
-
-                val newName = newFile.name
-
-                file.renameTo(newFile)
-
-                val path = bitmapExif.bitmap?.saveTo(newFile)
-
-                Exif.saveExif(bitmapExif.exifInterface, path)
-
                 val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
                 val projection = arrayOf(
@@ -404,7 +375,7 @@ class Android9Handler(
                             if (context.contentResolver.update(
                                     contentUri,
                                     ContentValues().apply {
-                                        put(MediaStore.Images.Media.DISPLAY_NAME, newName)
+                                        put(MediaStore.Images.Media.DISPLAY_NAME, newFile.name)
                                         put(MediaStore.Images.Media.DATA, path)
                                     },
                                     null,
@@ -413,27 +384,32 @@ class Android9Handler(
                             ) {
                                 deleteThumbnail(storageUri.mediaId, contentUri)
 
-                                MediaScannerConnection.scanFile(
-                                    context,
-                                    arrayOf(newFile.toString()),
-                                    null
-                                ) { _, _ ->
-                                    execute(lastExecution)
-
-                                    Image(
-                                        uri = contentUri,
-                                        name = newName,
-                                        id = storageUri.mediaId,
-                                        storage = Storage.EXTERNAL,
-                                    ).apply {
-                                        track("Saving image=$this")
-                                        imageSaved.tryEmit(this)
-                                    }
-                                }
+                                scanFileAndNotifySavedImage(
+                                    file = newFile,
+                                    mediaId = storageUri.mediaId,
+                                )
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private fun scanFileAndNotifySavedImage(file: File, mediaId: Long?) {
+        MediaScannerConnection.scanFile(
+            context,
+            arrayOf(file.toString()),
+            null
+        ) { path, uri ->
+            Image(
+                uri = uri,
+                name = file.name,
+                id = mediaId,
+                storage = Storage.EXTERNAL,
+            ).apply {
+                track("Saving image=$this")
+                imageSaved.tryEmit(this)
             }
         }
     }
