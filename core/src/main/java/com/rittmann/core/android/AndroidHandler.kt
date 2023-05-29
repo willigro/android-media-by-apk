@@ -7,6 +7,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.ImageBitmapExif
 import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import java.util.*
@@ -21,7 +22,7 @@ interface AndroidHandler {
     val cameraIsAvailable: MutableStateFlow<Boolean>
     val imageSaved: MutableStateFlow<Image?>
     val imageProxyTaken: MutableStateFlow<ImageProxy?>
-    val imageLoadedFromUri: MutableStateFlow<Image?>
+    val imageLoadedFromUri: MutableStateFlow<ImageBitmapExif?>
     val mediaImageList: MutableStateFlow<List<Image>>
     val mediaDeleted: MutableStateFlow<Image?>
 
@@ -35,7 +36,7 @@ interface AndroidHandler {
     fun requestCameraPermissions()
     fun loadInternalMedia() {}
     fun loadExternalMedia() {}
-    fun loadImageFromUri(storageUri: StorageUri)
+    fun loadImageBitmapExif(storageUri: StorageUri)
     fun loadThumbnail(image: Image): Bitmap
     fun loadBitmap(image: Image): Bitmap
     fun loadBitmapExif(image: Image): BitmapExif?
@@ -51,9 +52,9 @@ object AndroidHandlerFactory {
     fun create(context: Context, executor: ExecutorService): AndroidHandler {
         val sdk = android.os.Build.VERSION.SDK_INT
         return when {
-            sdk == android.os.Build.VERSION_CODES.Q -> Android10Handler()
-            sdk == android.os.Build.VERSION_CODES.R -> Android11Handler()
-            sdk >= android.os.Build.VERSION_CODES.S -> Android12Handler()
+            sdk == android.os.Build.VERSION_CODES.Q -> Android10Handler(context)
+            sdk == android.os.Build.VERSION_CODES.R -> Android11Handler(context)
+            sdk >= android.os.Build.VERSION_CODES.S -> Android12Handler(context)
             else -> Android9Handler(context, executor)
         }
     }

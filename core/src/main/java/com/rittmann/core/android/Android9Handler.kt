@@ -21,6 +21,7 @@ import androidx.exifinterface.media.ExifInterface
 import com.rittmann.core.camera.CameraHandler
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.ImageBitmapExif
 import com.rittmann.core.data.StorageUri
 import com.rittmann.core.exif.Exif
 import com.rittmann.core.extensions.arePermissionsGranted
@@ -185,18 +186,25 @@ class Android9Handler(
         track(imageList)
     }
 
-    override fun loadImageFromUri(storageUri: StorageUri) {
+    override fun loadImageBitmapExif(storageUri: StorageUri) {
         val uri = uriToUriFile(
             uri = Uri.parse(storageUri.uri)
         ) ?: return
 
         if (uri.path == null) return
 
-        imageLoadedFromUri.value = Image(
+        val image = Image(
             uri = uri,
             name = File(uri.path!!).name,
             id = storageUri.mediaId,
             storage = storageUri.storage,
+        )
+
+        imageLoadedFromUri.value = ImageBitmapExif(
+            image = image,
+            bitmapExif = loadBitmapExif(
+                image = image,
+            )
         )
     }
 

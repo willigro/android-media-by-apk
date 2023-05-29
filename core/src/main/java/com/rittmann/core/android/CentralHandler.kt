@@ -10,6 +10,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.ImageBitmapExif
 import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import java.io.File
@@ -28,7 +29,7 @@ open class CentralHandler(
     override val cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
     override val imageSaved: MutableStateFlow<Image?> = MutableStateFlow(null)
     override val imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
-    override val imageLoadedFromUri: MutableStateFlow<Image?> = MutableStateFlow(null)
+    override val imageLoadedFromUri: MutableStateFlow<ImageBitmapExif?> = MutableStateFlow(null)
     override val mediaImageList: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
     override val mediaDeleted: MutableStateFlow<Image?> = MutableStateFlow(null)
 
@@ -49,7 +50,7 @@ open class CentralHandler(
         TODO("Not yet implemented")
     }
 
-    override fun loadImageFromUri(storageUri: StorageUri) {
+    override fun loadImageBitmapExif(storageUri: StorageUri) {
         TODO("Not yet implemented")
     }
 

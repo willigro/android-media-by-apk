@@ -8,6 +8,7 @@ import com.rittmann.core.android.AndroidHandler
 import com.rittmann.core.android.Storage
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.ImageBitmapExif
 import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,11 +61,11 @@ class CreateMediaViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            androidHandler.imageLoadedFromUri.collectLatest { image ->
-                image?.also {
-                    _name.value = image.name.orEmpty()
+            androidHandler.imageLoadedFromUri.collectLatest { imageBitmapExif ->
+                imageBitmapExif?.also {
+                    _name.value = imageBitmapExif.image.name.orEmpty()
 
-                    _uiState.value = CameraUiState.ShowOldPicture(image)
+                    _uiState.value = CameraUiState.ShowOldPicture(imageBitmapExif)
                 }
             }
         }
@@ -117,15 +118,11 @@ class CreateMediaViewModel @Inject constructor(
         androidHandler.deleteImage(media)
     }
 
-    fun loadBitmapExif(media: Image): BitmapExif? {
-        return androidHandler.loadBitmapExif(media)
-    }
-
     fun loadUri(storageUri: StorageUri?) {
         this.storageUri = storageUri
 
         this.storageUri?.also {
-            androidHandler.loadImageFromUri(it)
+            androidHandler.loadImageBitmapExif(it)
         }
     }
 }
@@ -136,5 +133,5 @@ sealed class CameraUiState {
     object Deleted : CameraUiState()
     object TakePicture : CameraUiState()
     class ShowNewPicture(val image: ImageProxy) : CameraUiState()
-    class ShowOldPicture(val image: Image) : CameraUiState()
+    class ShowOldPicture(val imageBitmapExif: ImageBitmapExif) : CameraUiState()
 }

@@ -75,7 +75,6 @@ fun CreateMediaScreenRoot(
 
         is CameraUiState.ShowOldPicture -> OldImage(
             uiState = uiState,
-            loadBitmapExif = createMediaViewModel::loadBitmapExif,
             updateImage = createMediaViewModel::updateImage,
             deleteImage = createMediaViewModel::deleteImage,
             name = createMediaViewModel.name,
@@ -278,7 +277,6 @@ fun TakenImage(
 @Composable
 fun OldImage(
     uiState: CameraUiState.ShowOldPicture,
-    loadBitmapExif: (media: Image) -> BitmapExif?,
     updateImage: (BitmapExif) -> Unit,
     deleteImage: (Image) -> Unit,
     name: StateFlow<String>,
@@ -286,7 +284,7 @@ fun OldImage(
 ) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         var bitmapExif by remember {
-            mutableStateOf(loadBitmapExif(uiState.image))
+            mutableStateOf(uiState.imageBitmapExif.bitmapExif)
         }
 
         val (
@@ -379,7 +377,7 @@ fun OldImage(
                 Button(
                     modifier = Modifier.weight(AppTheme.floats.sameWeight),
                     onClick = {
-                        deleteImage(uiState.image)
+                        deleteImage(uiState.imageBitmapExif.image)
                     }
                 ) {
                     TextBody(text = "Delete")
