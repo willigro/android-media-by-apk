@@ -39,7 +39,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class Android9Handler(
     private val context: Context,
     executorService: ExecutorService,
-) : AndroidHandler {
+) : CentralHandler() {
 
     private val cameraHandler: CameraHandler = CameraHandler(executorService)
 
@@ -56,17 +56,6 @@ class Android9Handler(
     private var activityResultLauncherPermissions: ActivityResultLauncher<Array<String>>? = null
     private var activityResultLauncherSettings: ActivityResultLauncher<Intent>? = null
     private var activityResultLauncherCameraPermission: ActivityResultLauncher<String>? = null
-
-    override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> =
-        ConflatedEventBus()
-    override val queueExecution: Queue<QueueExecution> = LinkedList()
-    override var lastExecution: QueueExecution = QueueExecution.NONE
-    override val cameraIsAvailable: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    override val imageSaved: MutableStateFlow<Image?> = MutableStateFlow(null)
-    override val imageProxyTaken: MutableStateFlow<ImageProxy?> = MutableStateFlow(null)
-    override val imageLoadedFromUri: MutableStateFlow<Image?> = MutableStateFlow(null)
-    override val mediaImageList: MutableStateFlow<List<Image>> = MutableStateFlow(arrayListOf())
-    override val mediaDeleted: MutableStateFlow<Image?> = MutableStateFlow(null)
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
@@ -524,15 +513,6 @@ class Android9Handler(
         }
     }
 
-    override fun disposeCameraMembers() {
-        track()
-        cameraIsAvailable.value = false
-        imageProxyTaken.value = null
-        imageSaved.value = null
-        imageLoadedFromUri.value = null
-        mediaDeleted.value = null
-    }
-
     private fun deleteThumbnail(mediaId: Long?, contentUri: Uri) {
         track("data=$mediaId, contentUri=$contentUri")
 
@@ -617,22 +597,6 @@ class Android9Handler(
         )
     }
 
-    private fun generateFileName(name: String): String =
-        if (name.isEmpty()) {
-            SimpleDateFormat(
-                "yyyy-MM-dd-HH-mm-ss-SSS",
-                Locale.US,
-            ).format(System.currentTimeMillis()) + ".jpeg"
-        } else {
-            val n = if (name.contains(".")) {
-                name.split(".")[0]
-            } else {
-                name
-            }
-
-            "$n.jpeg"
-        }
-
     private fun checkStoragePermissionsAndScheduleExecutionCaseNeeded(
         execution: QueueExecution,
     ): PermissionStatusResult {
@@ -714,20 +678,6 @@ class Android9Handler(
             }
 
             track("camera=$isGranted")
-        }
-    }
-
-    private fun executeNextOnQueue() {
-        track(queueExecution)
-        execute(queueExecution.remove())
-    }
-
-    private fun execute(queueExecution: QueueExecution) {
-        track(queueExecution)
-        when (queueExecution) {
-            QueueExecution.RETRIEVE_INTERNAL_MEDIA -> loadInternalMedia()
-            QueueExecution.RETRIEVE_EXTERNAL_MEDIA -> loadExternalMedia()
-            else -> {}
         }
     }
 
