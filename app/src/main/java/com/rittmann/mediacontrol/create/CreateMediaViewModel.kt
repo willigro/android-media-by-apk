@@ -103,7 +103,7 @@ class CreateMediaViewModel @Inject constructor(
 
     fun updateImage(bitmapExif: BitmapExif) {
         createMediaScreenArguments?.storageUri?.also { storageUri ->
-            androidHandler.updateImage(bitmapExif, storageUri, _name.value)
+            androidHandler.updateImage(bitmapExif, storageUri, createMediaScreenArguments?.mediaId, _name.value)
         }
     }
 

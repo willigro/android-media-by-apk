@@ -64,7 +64,12 @@ class Android12Handler: AndroidHandler {
         TODO("Not yet implemented")
     }
 
-    override fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, name: String) {
+    override fun updateImage(
+        bitmapExif: BitmapExif,
+        storageUri: StorageUri,
+        mediaId: Long?,
+        name: String
+    ) {
         TODO("Not yet implemented")
     }
 

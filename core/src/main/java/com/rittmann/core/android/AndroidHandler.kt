@@ -40,7 +40,7 @@ interface AndroidHandler {
     fun loadBitmapExif(media: Image): BitmapExif?
     fun takePhoto(imageCapture: ImageCapture)
     fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String)
-    fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, name: String)
+    fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, mediaId: Long?, name: String)
     fun deleteImage(media: Image)
     fun disposeCameraMembers()
 }
