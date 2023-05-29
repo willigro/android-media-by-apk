@@ -6,7 +6,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.database.Cursor
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -34,9 +33,9 @@ import java.util.concurrent.ExecutorService
 
 
 class Android9Handler(
-    private val context: Context,
+    context: Context,
     executorService: ExecutorService,
-) : CentralHandler() {
+) : CentralHandler(context) {
 
     private val cameraHandler: CameraHandler = CameraHandler(executorService)
 
@@ -187,38 +186,18 @@ class Android9Handler(
     }
 
     override fun loadImageFromUri(storageUri: StorageUri) {
-        val uri = Uri.parse(storageUri.uri)
+        val uri = uriToUriFile(
+            uri = Uri.parse(storageUri.uri)
+        ) ?: return
 
         if (uri.path == null) return
 
-        when (storageUri.storage) {
-            Storage.INTERNAL -> {
-                val file = File(uri.path!!)
-
-                imageLoadedFromUri.value = Image(
-                    uri = uri,
-                    name = file.name,
-                    id = storageUri.mediaId,
-                    storage = Storage.INTERNAL,
-                )
-            }
-
-            Storage.EXTERNAL -> {
-                getRealExternalPathFromUri(context, uri)?.also { path ->
-                    val file = File(path)
-
-                    val uriFile = Uri.fromFile(file)
-                    track("Uri.fromFile(file)=${uriFile.path}, image.uri=${uri.path}")
-
-                    imageLoadedFromUri.value = Image(
-                        uri = uriFile,
-                        name = file.name,
-                        id = storageUri.mediaId,
-                        storage = Storage.INTERNAL,
-                    )
-                }
-            }
-        }
+        imageLoadedFromUri.value = Image(
+            uri = uri,
+            name = File(uri.path!!).name,
+            id = storageUri.mediaId,
+            storage = storageUri.storage,
+        )
     }
 
     override fun loadThumbnail(image: Image): Bitmap {
@@ -542,20 +521,6 @@ class Android9Handler(
 
                 thumbnails.moveToNext()
             }
-        }
-    }
-
-    private fun getRealExternalPathFromUri(context: Context, contentUri: Uri): String? {
-        var cursor: Cursor? = null
-        return try {
-            val proj = arrayOf(MediaStore.Images.Media.DATA)
-            cursor = context.contentResolver.query(contentUri, proj, null, null, null)
-            cursor?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)?.let { index ->
-                cursor.moveToFirst()
-                cursor.getString(index)
-            }
-        } finally {
-            cursor?.close()
         }
     }
 

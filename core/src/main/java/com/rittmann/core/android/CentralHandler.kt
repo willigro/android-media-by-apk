@@ -1,6 +1,10 @@
 package com.rittmann.core.android
 
+import android.content.Context
+import android.database.Cursor
 import android.graphics.Bitmap
+import android.net.Uri
+import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
@@ -8,11 +12,14 @@ import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
 import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 
-open class CentralHandler : AndroidHandler {
+open class CentralHandler(
+    protected val context: Context
+) : AndroidHandler {
 
     override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> =
         ConflatedEventBus(PermissionStatusResult())
@@ -118,4 +125,33 @@ open class CentralHandler : AndroidHandler {
 
             "$n.jpeg"
         }
+
+    protected fun uriToUriFile(uri: Uri): Uri? {
+        track(uri)
+        track(uri.path)
+
+        if (uri.toString().contains("file://")) {
+            return uri
+        }
+
+        return getRealExternalPathFromUri(context, uri)?.let { path ->
+            val file = File(path)
+
+            Uri.fromFile(file)
+        }
+    }
+
+    protected fun getRealExternalPathFromUri(context: Context, contentUri: Uri): String? {
+        var cursor: Cursor? = null
+        return try {
+            val proj = arrayOf(MediaStore.Images.Media.DATA)
+            cursor = context.contentResolver.query(contentUri, proj, null, null, null)
+            cursor?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)?.let { index ->
+                cursor.moveToFirst()
+                cursor.getString(index)
+            }
+        } finally {
+            cursor?.close()
+        }
+    }
 }
