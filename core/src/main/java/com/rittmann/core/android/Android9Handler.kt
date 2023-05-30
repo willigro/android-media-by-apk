@@ -32,7 +32,6 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.ExecutorService
-import kotlinx.coroutines.flow.MutableStateFlow
 
 
 class Android9Handler(
@@ -139,20 +138,14 @@ class Android9Handler(
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DISPLAY_NAME,
-            MediaStore.Images.Media.DATA,
         )
-
-        val selection = ""
-        val selectionArgs = arrayOf<String>()
-
-        val sortOrder = "${MediaStore.Images.Media.DISPLAY_NAME} ASC"
 
         val query = context.contentResolver.query(
             collection,
             projection,
-            selection,
-            selectionArgs,
-            sortOrder
+            null,
+            null,
+            null,
         )
 
         val imageList = mutableListOf<Image>()
@@ -161,20 +154,16 @@ class Android9Handler(
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val nameColumn =
                 cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val name = cursor.getString(nameColumn)
-                track(cursor.getString(dataColumn))
 
                 val contentUri: Uri = ContentUris.withAppendedId(
                     collection,
-                    id
+                    id,
                 )
 
-                // Stores column values and the contentUri in a local object
-                // that represents the media file.
                 imageList += Image(
                     uri = contentUri,
                     name = name,
@@ -268,43 +257,33 @@ class Android9Handler(
     }
 
     override fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String) {
-        track(storage)
+        val file = if (storage == Storage.INTERNAL) {
+            generateInternalFileToSave(name)
+        } else {
+            generateExternalFileToSave(name)
+        }
+
+        val path = bitmapExif.bitmap?.saveTo(file)
+
+        Exif.saveExif(bitmapExif.exifInterface, path)
+
         when (storage) {
             Storage.INTERNAL -> {
-                val file = generateInternalFileToSave(name)
-
-                track(
-                    "Saving exif=${
-                        bitmapExif.exifInterface?.getAttribute(ExifInterface.TAG_DATETIME)
-                            .toString()
-                    }"
+                val image = Image(
+                    uri = Uri.fromFile(file),
+                    name = file.name,
+                    id = null,
+                    storage = storage,
                 )
 
-                val path = bitmapExif.bitmap?.saveTo(file)
-
-                Exif.saveExif(bitmapExif.exifInterface, path)
-
                 if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
-                    Image(
-                        uri = Uri.fromFile(file),
-                        name = file.name,
-                        id = null,
-                        storage = storage,
-                    ).apply {
-                        imageSaved.tryEmit(this)
-
-                        mediaImageList.value += this
-                    }
+                    mediaImageList.value += image
                 }
+
+                imageSaved.tryEmit(image)
             }
 
             Storage.EXTERNAL -> {
-                val file = generateExternalFileToSave(name)
-
-                val savedPath = bitmapExif.bitmap?.saveTo(file)
-
-                Exif.saveExif(bitmapExif.exifInterface, savedPath)
-
                 scanFileAndNotifySavedImage(
                     file = file,
                     mediaId = null,
@@ -320,7 +299,6 @@ class Android9Handler(
     }
 
     private fun getMediaId(data: String): Long? {
-        track(data)
         val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
         val projection = arrayOf(
@@ -339,7 +317,6 @@ class Android9Handler(
         )
 
         return query?.use { cursor ->
-            track("cursor.count=${cursor.count}")
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
 
             if (cursor.moveToFirst()) {
@@ -432,24 +409,6 @@ class Android9Handler(
         }
     }
 
-    private fun scanFileAndNotifySavedImage(file: File, mediaId: Long?, scanned: (Image) -> Unit) {
-        MediaScannerConnection.scanFile(
-            context,
-            arrayOf(file.toString()),
-            null
-        ) { path, uri ->
-            track("path=$path, uri=$uri")
-            Image(
-                uri = uri,
-                name = file.name,
-                id = mediaId ?: getMediaId(path.orEmpty()),
-                storage = Storage.EXTERNAL,
-            ).apply {
-                scanned(this)
-            }
-        }
-    }
-
     override fun deleteImage(image: Image) {
         track(image)
         if (image.uri.path == null) return
@@ -470,45 +429,40 @@ class Android9Handler(
             }
 
             Storage.EXTERNAL -> {
-                val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                val mediaId = getMediaId(image.uri.path!!)
 
-                val projection = arrayOf(
-                    MediaStore.Images.Media._ID,
+                val contentUri: Uri = ContentUris.withAppendedId(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    mediaId ?: 0L
                 )
 
-                val selection = "${MediaStore.Images.Media._ID} = ?"
-                val selectionArgs = arrayOf(image.id.toString())
-
-                val query = context.contentResolver.query(
-                    collection,
-                    projection,
-                    selection,
-                    selectionArgs,
-                    null,
-                )
-
-                query?.use { cursor ->
-                    val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-
-                    if (cursor.moveToFirst()) {
-                        val id = cursor.getLong(idColumn)
-
-                        val contentUri: Uri = ContentUris.withAppendedId(
-                            collection,
-                            id
-                        )
-
-                        contentUri.path?.let {
-                            if (context.contentResolver.delete(contentUri, null, null) > 0) {
-                                if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
-                                    mediaImageList.delete(image)
-                                }
-
-                                mediaDeleted.value = image
-                            }
+                contentUri.path?.let {
+                    if (context.contentResolver.delete(contentUri, null, null) > 0) {
+                        if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                            mediaImageList.delete(image)
                         }
+
+                        mediaDeleted.value = image
                     }
                 }
+            }
+        }
+    }
+
+    private fun scanFileAndNotifySavedImage(file: File, mediaId: Long?, scanned: (Image) -> Unit) {
+        MediaScannerConnection.scanFile(
+            context,
+            arrayOf(file.toString()),
+            null
+        ) { path, uri ->
+            track("path=$path, uri=$uri")
+            Image(
+                uri = uri,
+                name = file.name,
+                id = mediaId ?: getMediaId(path.orEmpty()),
+                storage = Storage.EXTERNAL,
+            ).apply {
+                scanned(this)
             }
         }
     }
