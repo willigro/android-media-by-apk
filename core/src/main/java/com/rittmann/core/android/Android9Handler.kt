@@ -394,60 +394,37 @@ class Android9Handler(
             }
 
             Storage.EXTERNAL -> {
-                val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                val mediaId = getMediaId(uri.path!!)
 
-                val projection = arrayOf(
-                    MediaStore.Images.Media._ID,
+                val contentUri: Uri = ContentUris.withAppendedId(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    mediaId ?: 0L,
                 )
 
-                val selection = "${MediaStore.Images.Media.DATA} = ?"
-                val selectionArgs = arrayOf(uri.path!!)
+                contentUri.path?.let {
+                    if (context.contentResolver.update(
+                            contentUri,
+                            ContentValues().apply {
+                                put(MediaStore.Images.Media.DATA, path)
+                                put(MediaStore.Images.Media.DISPLAY_NAME, newFile.name)
+                            },
+                            null,
+                            null
+                        ) > 0
+                    ) {
+                        deleteThumbnail(storageUri.mediaId, contentUri)
 
-                val query = context.contentResolver.query(
-                    collection,
-                    projection,
-                    selection,
-                    selectionArgs,
-                    null,
-                )
-
-                query?.use { cursor ->
-                    val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-
-                    if (cursor.moveToFirst()) {
-                        val id = cursor.getLong(idColumn)
-
-                        val contentUri: Uri = ContentUris.withAppendedId(
-                            collection,
-                            id
-                        )
-
-                        contentUri.path?.let {
-                            if (context.contentResolver.update(
-                                    contentUri,
-                                    ContentValues().apply {
-                                        put(MediaStore.Images.Media.DATA, path)
-                                        put(MediaStore.Images.Media.DISPLAY_NAME, newFile.name)
-                                    },
-                                    null,
-                                    null
-                                ) > 0
-                            ) {
-                                deleteThumbnail(storageUri.mediaId, contentUri)
-
-                                scanFileAndNotifySavedImage(
-                                    file = newFile,
-                                    mediaId = storageUri.mediaId,
-                                ) { image ->
-                                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
-                                        mediaImageList.update(image) {
-                                            it.name == oldName
-                                        }
-                                    }
-
-                                    imageSaved.tryEmit(image)
+                        scanFileAndNotifySavedImage(
+                            file = newFile,
+                            mediaId = storageUri.mediaId,
+                        ) { image ->
+                            if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                                mediaImageList.update(image) {
+                                    it.name == oldName
                                 }
                             }
+
+                            imageSaved.tryEmit(image)
                         }
                     }
                 }
