@@ -33,7 +33,7 @@ object Versions {
 
     // Compose
 //    const val COMPOSE = "1.1.0-beta01"
-    const val COMPOSE = "1.3.1"
+    const val COMPOSE = "1.4.6"
     const val ACTIVITY_COMPOSE = "1.3.1"
     const val CONSTRAINT_COMPOSE = "1.0.0"
 
@@ -47,7 +47,7 @@ object Versions {
     const val VIEW_MODEL = "2.4.0"
 
     // Kotlin
-    const val KOTLIN_VERSION = "1.7.10"
+    const val KOTLIN_VERSION = "1.8.20"
 
     // Test
     const val ANDROID_X_TEST_CORE = "1.4.0"

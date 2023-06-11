@@ -23,9 +23,9 @@ import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rittmann.components.theme.AppTheme
-import com.rittmann.components.ui.TextBody
-import com.rittmann.components.ui.TextH1
-import com.rittmann.components.ui.TextH2
+import com.rittmann.components.ui.MediaTextBody
+import com.rittmann.components.ui.MediaTextH1
+import com.rittmann.components.ui.MediaTextH2
 import com.rittmann.core.android.AndroidVersion
 import com.rittmann.core.data.Image
 import com.rittmann.mediacontrol.navigation.Navigation
@@ -65,7 +65,7 @@ fun MediasScreenRoot(
             }
             .fillMaxWidth()
         ) {
-            TextH2(
+            MediaTextH2(
                 text = "Internal",
                 modifier = Modifier
                     .weight(1f)
@@ -74,7 +74,7 @@ fun MediasScreenRoot(
                     },
                 textAlign = TextAlign.Center,
             )
-            TextH2(
+            MediaTextH2(
                 text = "External",
                 modifier = Modifier
                     .weight(1f)
@@ -108,7 +108,7 @@ fun MediasScreenRoot(
                 navController.navigate(Navigation.Create.destination)
             },
         ) {
-            TextBody(text = "Create")
+            MediaTextBody(text = "Create")
         }
     }
 }
@@ -125,7 +125,7 @@ fun ToolbarTitle(
         AndroidVersion.ANDROID_12 -> "Android 12"
     }
 
-    TextH1(text = text, modifier = modifier)
+    MediaTextH1(text = text, modifier = modifier)
 }
 
 @Composable
@@ -163,7 +163,7 @@ fun MediasList(
                         .height(AppTheme.dimensions.mediaDimens.thumbnailHeight),
                 )
 
-                TextBody(
+                MediaTextBody(
                     text = media.name,
                     modifier = Modifier
                         .fillMaxWidth()

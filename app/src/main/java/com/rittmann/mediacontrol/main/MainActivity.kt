@@ -3,7 +3,7 @@ package com.rittmann.mediacontrol.main
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.rittmann.components.theme.GitHubTheme
+import com.rittmann.components.theme.MediaTheme
 import com.rittmann.core.android.AndroidHandler
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.ExecutorService
@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         androidHandler.registerPermissions(this)
 
         setContent {
-            GitHubTheme {
+            MediaTheme {
                 MainScreenRoot(androidHandler)
             }
         }

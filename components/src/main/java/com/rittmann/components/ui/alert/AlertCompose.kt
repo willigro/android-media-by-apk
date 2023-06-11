@@ -8,15 +8,15 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material.ContentAlpha
 import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.contentColorFor
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
@@ -30,8 +30,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.rittmann.components.R
 import com.rittmann.components.theme.AppTheme
-import com.rittmann.components.ui.TextBody
-import com.rittmann.components.ui.TextH2
+import com.rittmann.components.ui.MediaTextBody
+import com.rittmann.components.ui.MediaTextH2
 
 
 open class AlertCompose(var title: String, var message: String) {
@@ -75,10 +75,10 @@ class AlertComposeOk(
             AlertDialog(
                 onDismissRequest = ::dismiss,
                 title = {
-                    TextBody(text = title)
+                    MediaTextBody(text = title)
                 },
                 text = {
-                    TextBody(text = message)
+                    MediaTextBody(text = message)
                 },
                 confirmButton = {
                     Button(onClick = {
@@ -115,7 +115,7 @@ class AlertComposeConfirm(
                             .fillMaxWidth(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TextH2(
+                        MediaTextH2(
                             text = title,
                             textAlign = TextAlign.Center,
                         )
@@ -132,7 +132,7 @@ class AlertComposeConfirm(
                             .fillMaxWidth(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TextBody(
+                        MediaTextBody(
                             text = message,
                             textAlign = TextAlign.Center,
                         )
@@ -141,8 +141,8 @@ class AlertComposeConfirm(
                 confirmButton = {
                     Text(
                         text = stringResource(id = R.string.dialog_confirm),
-                        fontSize = MaterialTheme.typography.button.fontSize,
-                        color = AppTheme.colors.primary,
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+//                        color = AppTheme.colors.primary,
                         modifier = Modifier
                             .clickable {
                                 dismiss()
@@ -157,7 +157,7 @@ class AlertComposeConfirm(
                 dismissButton = {
                     Text(
                         text = stringResource(id = R.string.dialog_cancel),
-                        fontSize = MaterialTheme.typography.button.fontSize,
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize,
                         color = Color.Gray,
                         modifier = Modifier
                             .clickable {
@@ -182,7 +182,7 @@ fun NoPaddingAlertDialog(
     confirmButton: @Composable () -> Unit,
     dismissButton: @Composable (() -> Unit)? = null,
     shape: Shape = MaterialTheme.shapes.medium,
-    backgroundColor: Color = MaterialTheme.colors.surface,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
     contentColor: Color = contentColorFor(backgroundColor),
     properties: DialogProperties = DialogProperties()
 ) {
@@ -202,13 +202,13 @@ fun NoPaddingAlertDialog(
             ) {
                 title?.let {
                     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-                        val textStyle = MaterialTheme.typography.subtitle1
+                        val textStyle = MaterialTheme.typography.titleSmall
                         ProvideTextStyle(textStyle, it)
                     }
                 }
                 text?.let {
                     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-                        val textStyle = MaterialTheme.typography.subtitle1
+                        val textStyle = MaterialTheme.typography.titleSmall
                         ProvideTextStyle(textStyle, it)
                     }
                 }

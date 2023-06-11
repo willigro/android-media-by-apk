@@ -108,21 +108,50 @@ object Depends {
 
     object Compose {
         fun DependencyHandler.implementCompose() {
-            implement("androidx.compose.ui:ui:${Versions.COMPOSE}")
-            implement("androidx.compose.material:material:${Versions.COMPOSE}")
-            implement("androidx.compose.ui:ui-tooling-preview:${Versions.COMPOSE}")
-            debugImplementation("androidx.compose.ui:ui-tooling:${Versions.COMPOSE}")
+//            implement("androidx.compose.ui:ui:${Versions.COMPOSE}")
+//            implement("androidx.compose.material:material:${Versions.COMPOSE}")
+//            implement("androidx.compose.ui:ui-tooling-preview:${Versions.COMPOSE}")
+//            debugImplementation("androidx.compose.ui:ui-tooling:${Versions.COMPOSE}")
             implement("androidx.constraintlayout:constraintlayout-compose:${Versions.CONSTRAINT_COMPOSE}")
-            implement("androidx.activity:activity-compose:${Versions.ACTIVITY_COMPOSE}")
-            implement("androidx.compose.ui:ui-test-manifest:${Versions.COMPOSE}")
-            implement("androidx.compose.material3:material3:1.0.0-alpha01")
-            implement("androidx.paging:paging-compose:1.0.0-alpha10")
-
+//            implement("androidx.activity:activity-compose:${Versions.ACTIVITY_COMPOSE}")
+//            implement("androidx.compose.ui:ui-test-manifest:${Versions.COMPOSE}")
+//            implement("androidx.compose.material3:material3:1.1.0-alpha06")
+//            implement("androidx.paging:paging-compose:1.0.0-alpha10")
+//
             implement("androidx.hilt:hilt-navigation-compose:1.0.0-alpha02")
             implement("androidx.navigation:navigation-compose:2.5.3")
+//
+//            implement("androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.LIFECYCLE}")
+//            implement("androidx.lifecycle:lifecycle-viewmodel-savedstate:${Versions.LIFECYCLE}")
 
-            implement("androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.LIFECYCLE}")
-            implement("androidx.lifecycle:lifecycle-viewmodel-savedstate:${Versions.LIFECYCLE}")
+            add(IMPLEMENTATION, platform("androidx.compose:compose-bom:2023.04.01"))
+            // Material Design 3
+            implement ("androidx.compose.material3:material3")
+            // or skip Material Design and build directly on top of foundational components
+            implement ("androidx.compose.foundation:foundation")
+            // or only import the main APIs for the underlying toolkit systems,
+            // such as input and measurement/layout
+            implement ("androidx.compose.ui:ui")
+
+            // Android Studio Preview support
+            implement ("androidx.compose.ui:ui-tooling-preview")
+            debugImplementation ("androidx.compose.ui:ui-tooling")
+
+            // Optional - Included automatically by material, only add when you need
+            // the icons but not the material library (e.g. when using Material3 or a
+            // custom design system based on Foundation)
+            implement ("androidx.compose.material:material-icons-core")
+            // Optional - Add full set of material icons
+            implement ("androidx.compose.material:material-icons-extended")
+            // Optional - Add window size utils
+            implement ("androidx.compose.material3:material3-window-size-class")
+
+            // Optional - Integration with activities
+            implement ("androidx.activity:activity-compose:1.6.1")
+            // Optional - Integration with ViewModels
+            implement ("androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1")
+            // Optional - Integration with LiveData
+            implement ("androidx.compose.runtime:runtime-livedata")
 
             implement("com.google.accompanist:accompanist-insets:0.13.0")
             implement("com.google.accompanist:accompanist-insets-ui:0.13.0")

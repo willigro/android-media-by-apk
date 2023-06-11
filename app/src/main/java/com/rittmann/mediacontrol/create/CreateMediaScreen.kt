@@ -38,7 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rittmann.components.theme.AppTheme
 import com.rittmann.components.ui.SimpleTextField
-import com.rittmann.components.ui.TextBody
+import com.rittmann.components.ui.MediaTextBody
 import com.rittmann.core.android.Storage
 import com.rittmann.core.android.StorageUri
 import com.rittmann.core.data.BitmapExif
@@ -94,7 +94,7 @@ fun CreateMediaScreenRoot(
         }
 
         else -> {
-            TextBody(
+            MediaTextBody(
                 text = "Loading info",
                 modifier = Modifier.fillMaxSize(),
                 textAlign = TextAlign.Center,
@@ -145,7 +145,7 @@ fun CameraView(
                 viewModel.takePhoto(imageCapture = imageCapture)
             }
         ) {
-            TextBody(text = "Take picture")
+            MediaTextBody(text = "Take picture")
         }
     }
 }
@@ -202,7 +202,7 @@ fun TakenImage(
             },
             onClick = takeAgain,
         ) {
-            TextBody(text = "Take Again")
+            MediaTextBody(text = "Take Again")
         }
 
         Box(
@@ -224,19 +224,19 @@ fun TakenImage(
                         )
                     }
                 ) {
-                    TextBody(text = "Apply filter")
+                    MediaTextBody(text = "Apply filter")
                 }
 
                 ImageName(modifier = Modifier, name = name, setName = setName)
 
                 bitmapExif?.exifInterface?.also { exifInterface ->
-                    TextBody(
+                    MediaTextBody(
                         text = exifInterface.getAttribute(ExifInterface.TAG_DATETIME).toString()
                     )
-                    TextBody(
+                    MediaTextBody(
                         text = exifInterface.getAttribute(ExifInterface.TAG_ORIENTATION).toString()
                     )
-                    TextBody(
+                    MediaTextBody(
                         text = exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH).toString()
                     )
                 }
@@ -263,7 +263,7 @@ fun TakenImage(
                             bitmapExif?.let { saveImage(it, Storage.INTERNAL) }
                         }
                     ) {
-                        TextBody(text = "Save Internal")
+                        MediaTextBody(text = "Save Internal")
                     }
 
                     Button(
@@ -272,7 +272,7 @@ fun TakenImage(
                             bitmapExif?.let { saveImage(it, Storage.EXTERNAL) }
                         }
                     ) {
-                        TextBody(text = "Save External")
+                        MediaTextBody(text = "Save External")
                     }
                 }
             }
@@ -340,19 +340,19 @@ fun OldImage(
                         )
                     }
                 ) {
-                    TextBody(text = "Apply filter")
+                    MediaTextBody(text = "Apply filter")
                 }
 
                 ImageName(modifier = Modifier, name = name, setName = setName)
 
                 bitmapExif?.exifInterface?.also { exifInterface ->
-                    TextBody(
+                    MediaTextBody(
                         text = exifInterface.getAttribute(ExifInterface.TAG_DATETIME).toString()
                     )
-                    TextBody(
+                    MediaTextBody(
                         text = exifInterface.getAttribute(ExifInterface.TAG_ORIENTATION).toString()
                     )
-                    TextBody(
+                    MediaTextBody(
                         text = exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH).toString()
                     )
                 }
@@ -378,7 +378,7 @@ fun OldImage(
                         bitmapExif?.let { updateImage(it) }
                     }
                 ) {
-                    TextBody(text = "Save")
+                    MediaTextBody(text = "Save")
                 }
 
                 Button(
@@ -387,7 +387,7 @@ fun OldImage(
                         deleteImage(uiState.image)
                     }
                 ) {
-                    TextBody(text = "Delete")
+                    MediaTextBody(text = "Delete")
                 }
             }
         }
