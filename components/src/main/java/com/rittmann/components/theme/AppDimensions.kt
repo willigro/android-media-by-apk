@@ -22,11 +22,17 @@ data class AppDimensions(
 
     val dialogDimens: DialogDimens = DialogDimens(),
     val mediaScreenDimens: MediaScreenDimens = MediaScreenDimens(),
+    val createMediaScreenDimens: CreateMediaScreenDimens = CreateMediaScreenDimens(),
 )
 
 class MediaScreenDimens(
     val thumbnailPadding: Dp = 5.dp,
     val thumbnailNamePadding: Dp = 5.dp,
+)
+
+class CreateMediaScreenDimens(
+    val takePictureButtonSize: Dp = 80.dp,
+    val takePictureButtonBottomPadding: Dp = 20.dp,
 )
 
 class DialogDimens(

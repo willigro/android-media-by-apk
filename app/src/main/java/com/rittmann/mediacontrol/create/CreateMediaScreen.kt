@@ -6,13 +6,16 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
@@ -25,11 +28,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
@@ -37,8 +42,8 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rittmann.components.theme.AppTheme
-import com.rittmann.components.ui.SimpleTextField
 import com.rittmann.components.ui.MediaTextBody
+import com.rittmann.components.ui.SimpleTextField
 import com.rittmann.core.android.Storage
 import com.rittmann.core.android.StorageUri
 import com.rittmann.core.data.BitmapExif
@@ -48,6 +53,7 @@ import com.rittmann.core.extensions.getCameraProvider
 import com.rittmann.core.extensions.toBitmapExif
 import com.rittmann.core.tracker.track
 import kotlinx.coroutines.flow.StateFlow
+
 
 data class CreateMediaScreenArguments(
     val storageUri: StorageUri? = null,
@@ -139,13 +145,58 @@ fun CameraView(
             modifier = Modifier.fillMaxSize(),
         )
 
-        Button(
-            modifier = Modifier.padding(bottom = 20.dp),
-            onClick = {
-                viewModel.takePhoto(imageCapture = imageCapture)
-            }
+        val clickOffset = remember {
+            mutableStateOf<Circle?>(null)
+        }
+
+        val isInside = remember {
+            mutableStateOf(false)
+        }
+
+        Canvas(
+            modifier = Modifier
+                .size(AppTheme.dimensions.createMediaScreenDimens.takePictureButtonSize)
+                .padding(
+                    bottom = AppTheme.dimensions.createMediaScreenDimens.takePictureButtonBottomPadding
+                )
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            clickOffset.value?.also { circle ->
+                                if (circle.intersect(offset.x, offset.y)) {
+                                    isInside.value = true
+                                }
+                            }
+                        },
+                        onTap = {
+                            if (isInside.value) {
+                                viewModel.takePhoto(imageCapture = imageCapture)
+                            }
+
+                            isInside.value = false
+                        }
+                    )
+                }
         ) {
-            MediaTextBody(text = "Take picture")
+            drawCircle(
+                color = Color.White,
+                center = center,
+                style = Stroke(6f)
+            )
+
+            val radius = (size.minDimension / 2f) / 2f
+
+            drawCircle(
+                color = if (isInside.value) Color.Red else Color.White,
+                radius = radius,
+                center = center,
+            )
+
+            clickOffset.value = Circle(
+                x = center.x,
+                y = center.y,
+                radius = radius,
+            )
         }
     }
 }
