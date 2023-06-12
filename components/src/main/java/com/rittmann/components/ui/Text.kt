@@ -5,8 +5,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 
 @Preview
@@ -63,5 +65,26 @@ fun MediaTextBody(
         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = fontWeight),
         maxLines = maxLines,
         textAlign = textAlign,
+    )
+}
+
+@Composable
+fun MediaTextBodySmall(
+    text: String,
+    modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
+    fontWeight: FontWeight = FontWeight.Normal,
+    textAlign: TextAlign? = null,
+    color: Color = Color.Unspecified,
+    overflow: TextOverflow = TextOverflow.Clip,
+) {
+    Text(
+        modifier = modifier,
+        text = text,
+        style = MaterialTheme.typography.bodySmall.copy(fontWeight = fontWeight),
+        maxLines = maxLines,
+        textAlign = textAlign,
+        color = color,
+        overflow = overflow,
     )
 }

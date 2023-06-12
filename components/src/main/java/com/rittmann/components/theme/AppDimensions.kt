@@ -2,7 +2,6 @@ package com.rittmann.components.theme
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 
 data class AppDimensions(
@@ -22,11 +21,12 @@ data class AppDimensions(
     val divisor: Dp = 1.dp,
 
     val dialogDimens: DialogDimens = DialogDimens(),
-    val mediaDimens: MediaDimens = MediaDimens(),
+    val mediaScreenDimens: MediaScreenDimens = MediaScreenDimens(),
 )
 
-class MediaDimens(
-    val thumbnailHeight: Dp = 200.dp
+class MediaScreenDimens(
+    val thumbnailPadding: Dp = 5.dp,
+    val thumbnailNamePadding: Dp = 5.dp,
 )
 
 class DialogDimens(

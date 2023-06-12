@@ -3,12 +3,11 @@ package com.rittmann.mediacontrol.medias
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -16,14 +15,17 @@ import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rittmann.components.theme.AppTheme
 import com.rittmann.components.ui.MediaTextBody
+import com.rittmann.components.ui.MediaTextBodySmall
 import com.rittmann.components.ui.MediaTextH1
 import com.rittmann.components.ui.MediaTextH2
 import com.rittmann.core.android.AndroidVersion
@@ -138,13 +140,18 @@ fun MediasList(
     val list = uiState.mediaList.collectAsState().value
 
     LazyVerticalGrid(
-        modifier = modifier,
-        columns = GridCells.Fixed(2),
+        modifier = modifier.padding(
+            AppTheme.dimensions.paddingSmall,
+        ),
+        columns = GridCells.Fixed(3),
     ) {
         items(list) { media ->
-            Column(
+            ConstraintLayout(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .padding(
+                        AppTheme.dimensions.mediaScreenDimens.thumbnailPadding,
+                    )
+                    .wrapContentSize()
                     .clickable {
                         navController.navigate(
                             Navigation.Update.transformDestination(
@@ -153,21 +160,35 @@ fun MediasList(
                                 media.id,
                             )
                         )
-                    },
+                    }
             ) {
+                val (image, name) = createRefs()
+
                 val bitmap = loadBitmapFor(media)
+
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier
-                        .height(AppTheme.dimensions.mediaDimens.thumbnailHeight),
+                        .constrainAs(image) {
+                            top.linkTo(parent.top)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                        },
                 )
 
-                MediaTextBody(
+                MediaTextBodySmall(
                     text = media.name,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = AppTheme.dimensions.paddingTopBetweenComponentsSmall),
+                        .constrainAs(name) {
+                            bottom.linkTo(image.bottom)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                        }
+                        .padding(AppTheme.dimensions.mediaScreenDimens.thumbnailNamePadding),
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
