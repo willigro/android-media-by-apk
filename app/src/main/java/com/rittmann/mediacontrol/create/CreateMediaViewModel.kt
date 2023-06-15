@@ -63,7 +63,7 @@ class CreateMediaViewModel @Inject constructor(
                 image?.also {
                     _name.value = image.name
 
-                    _uiState.value = CameraUiState.ShowOldPicture(image)
+                    _uiState.value = CameraUiState.UpdatingPicture(image)
                 }
             }
         }
@@ -136,5 +136,5 @@ sealed class CameraUiState {
     object Deleted : CameraUiState()
     object TakePicture : CameraUiState()
     class ShowNewPicture(val image: ImageProxy) : CameraUiState()
-    class ShowOldPicture(val image: Image) : CameraUiState()
+    class UpdatingPicture(val image: Image) : CameraUiState()
 }

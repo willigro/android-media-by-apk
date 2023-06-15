@@ -8,6 +8,7 @@ import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
@@ -41,9 +45,12 @@ import androidx.constraintlayout.compose.Dimension
 import androidx.exifinterface.media.ExifInterface
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.rittmann.components.icons.MediaIcons
 import com.rittmann.components.theme.AppTheme
 import com.rittmann.components.ui.MediaTextBody
+import com.rittmann.components.ui.MediaTextBodySmall
 import com.rittmann.components.ui.SimpleTextField
+import com.rittmann.components.ui.linkToSides
 import com.rittmann.core.android.Storage
 import com.rittmann.core.android.StorageUri
 import com.rittmann.core.data.BitmapExif
@@ -84,7 +91,7 @@ fun CreateMediaScreenRoot(
             setName = createMediaViewModel::setName,
         )
 
-        is CameraUiState.ShowOldPicture -> OldImage(
+        is CameraUiState.UpdatingPicture -> UpdateImage(
             uiState = uiState,
             loadBitmapExif = createMediaViewModel::loadBitmapExif,
             updateImage = createMediaViewModel::updateImage,
@@ -215,125 +222,151 @@ fun TakenImage(
             mutableStateOf(false)
         }
 
-        var bitmapExif by remember {
+        val bitmapExif = remember {
             mutableStateOf(uiState.image.image?.toBitmapExif())
         }
 
         val (
             containerImage,
-            infoContainer,
-            takeAgainContainer,
-            buttonSave,
+            containerOptions,
         ) = createRefs()
 
-        val middleGuideline = createGuidelineFromTop(0.5f)
-
         Box(
-            contentAlignment = Alignment.BottomCenter,
-            modifier = Modifier.constrainAs(containerImage) {
-                top.linkTo(parent.top)
-                bottom.linkTo(middleGuideline)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-                height = Dimension.fillToConstraints
-            }
+            modifier = Modifier
+                .constrainAs(containerImage) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(containerOptions.top)
+                    linkToSides()
+                    height = Dimension.fillToConstraints
+                    width = Dimension.fillToConstraints
+                }
+                .fillMaxWidth()
+                .background(Color.Red),
+            contentAlignment = Alignment.TopCenter,
         ) {
             ImageContainer(
-                bitmap = bitmapExif?.bitmap,
+                bitmap = bitmapExif.value?.bitmap,
                 takeAgain = takeAgain,
                 showSaveButton = showSaveButton,
             )
         }
 
-        Button(
-            modifier = Modifier.constrainAs(takeAgainContainer) {
-                top.linkTo(middleGuideline)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-            },
-            onClick = takeAgain,
-        ) {
-            MediaTextBody(text = "Take Again")
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .constrainAs(infoContainer) {
-                    top.linkTo(takeAgainContainer.bottom)
-                    bottom.linkTo(buttonSave.top)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                    height = Dimension.fillToConstraints
-                }
-        ) {
-            Column(modifier = Modifier.wrapContentSize()) {
-                Button(
-                    onClick = {
-                        bitmapExif = bitmapExif?.copy(
-                            bitmap = bitmapExif?.bitmap?.applyRandomFilter()
-                        )
-                    }
-                ) {
-                    MediaTextBody(text = "Apply filter")
-                }
-
-                ImageName(modifier = Modifier, name = name, setName = setName)
-
-                bitmapExif?.exifInterface?.also { exifInterface ->
-                    MediaTextBody(
-                        text = exifInterface.getAttribute(ExifInterface.TAG_DATETIME).toString()
-                    )
-                    MediaTextBody(
-                        text = exifInterface.getAttribute(ExifInterface.TAG_ORIENTATION).toString()
-                    )
-                    MediaTextBody(
-                        text = exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH).toString()
-                    )
-                }
-            }
-        }
-
-        Box(
-            modifier = Modifier.constrainAs(buttonSave) {
+        TakenImageOptions(
+            modifier = Modifier.constrainAs(containerOptions) {
                 bottom.linkTo(parent.bottom)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-            }
-        ) {
-            if (showSaveButton.value) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = AppTheme.dimensions.paddingTopBetweenComponentsMedium),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        modifier = Modifier.weight(AppTheme.floats.sameWeight),
-                        onClick = {
-                            bitmapExif?.let { saveImage(it, Storage.INTERNAL) }
-                        }
-                    ) {
-                        MediaTextBody(text = "Save Internal")
-                    }
+                linkToSides()
+            },
+            takeAgain = takeAgain,
+            showSaveButton = showSaveButton,
+            bitmapExif = bitmapExif,
+            saveImage = saveImage,
+            name = name,
+            setName = setName,
+        )
+    }
+}
 
-                    Button(
-                        modifier = Modifier.weight(AppTheme.floats.sameWeight),
-                        onClick = {
-                            bitmapExif?.let { saveImage(it, Storage.EXTERNAL) }
-                        }
+@Composable
+fun TakenImageOptions(
+    modifier: Modifier,
+    takeAgain: () -> Unit,
+    showSaveButton: MutableState<Boolean>,
+    bitmapExif: MutableState<BitmapExif?>,
+    saveImage: (BitmapExif, Storage) -> Unit,
+    name: StateFlow<String>,
+    setName: (String) -> Unit,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            IconButton(
+                modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                onClick = takeAgain,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(imageVector = MediaIcons.Refresh, contentDescription = null)
+
+                    MediaTextBodySmall(text = "Redo")
+                }
+            }
+
+            IconButton(
+                modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                onClick = {
+                    bitmapExif.value = bitmapExif.value?.copy(
+                        bitmap = bitmapExif.value?.bitmap?.applyRandomFilter()
+                    )
+                }
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(imageVector = MediaIcons.Add, contentDescription = null)
+
+                    MediaTextBodySmall(text = "Filter")
+                }
+            }
+
+            if (showSaveButton.value) {
+                IconButton(
+                    modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                    onClick = {
+                        bitmapExif.value?.let { saveImage(it, Storage.INTERNAL) }
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        MediaTextBody(text = "Save External")
+                        Icon(imageVector = MediaIcons.ArrowDownward, contentDescription = null)
+
+                        MediaTextBodySmall(text = "Internal")
                     }
                 }
+
+                IconButton(
+                    modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                    onClick = {
+                        bitmapExif.value?.let { saveImage(it, Storage.EXTERNAL) }
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Icon(imageVector = MediaIcons.ArrowUpward, contentDescription = null)
+
+                        MediaTextBodySmall(text = "External")
+                    }
+                }
+            }
+        }
+
+        Column(modifier = Modifier.wrapContentSize()) {
+            ImageName(modifier = Modifier, name = name, setName = setName)
+
+            bitmapExif.value?.exifInterface?.also { exifInterface ->
+                MediaTextBody(
+                    text = exifInterface.getAttribute(ExifInterface.TAG_DATETIME)
+                        .toString()
+                )
+                MediaTextBody(
+                    text = exifInterface.getAttribute(ExifInterface.TAG_ORIENTATION)
+                        .toString()
+                )
+                MediaTextBody(
+                    text = exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH)
+                        .toString()
+                )
             }
         }
     }
 }
 
 @Composable
-fun OldImage(
-    uiState: CameraUiState.ShowOldPicture,
+fun UpdateImage(
+    uiState: CameraUiState.UpdatingPicture,
     loadBitmapExif: (media: Image) -> BitmapExif?,
     updateImage: (BitmapExif) -> Unit,
     deleteImage: (Image) -> Unit,
@@ -358,8 +391,7 @@ fun OldImage(
             modifier = Modifier.constrainAs(containerImage) {
                 top.linkTo(parent.top)
                 bottom.linkTo(middleGuideline)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
+                linkToSides()
                 height = Dimension.fillToConstraints
             }
         ) {
@@ -378,8 +410,7 @@ fun OldImage(
                 .constrainAs(infoContainer) {
                     top.linkTo(containerImage.bottom)
                     bottom.linkTo(buttonSave.top)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
+                    linkToSides()
                     height = Dimension.fillToConstraints
                 }
         ) {
@@ -413,8 +444,7 @@ fun OldImage(
         Box(
             modifier = Modifier.constrainAs(buttonSave) {
                 bottom.linkTo(parent.bottom)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
+                linkToSides()
             }
         ) {
             Row(
@@ -459,7 +489,8 @@ fun ImageContainer(
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

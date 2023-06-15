@@ -20,9 +20,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ImportExport
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -39,4 +43,7 @@ object MediaIcons {
     val Person = Icons.Rounded.Person
     val Search = Icons.Rounded.Search
     val Settings = Icons.Rounded.Settings
+    val Refresh = Icons.Rounded.Refresh
+    val ArrowUpward = Icons.Rounded.ArrowUpward
+    val ArrowDownward = Icons.Rounded.ArrowDownward
 }
