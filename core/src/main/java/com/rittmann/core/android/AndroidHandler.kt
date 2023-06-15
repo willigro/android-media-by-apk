@@ -2,6 +2,7 @@ package com.rittmann.core.android
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
@@ -48,11 +49,10 @@ interface AndroidHandler {
 object AndroidHandlerFactory {
 
     fun create(context: Context, executor: ExecutorService): AndroidHandler {
-        val sdk = android.os.Build.VERSION.SDK_INT
         return when {
-            sdk == android.os.Build.VERSION_CODES.Q -> Android10Handler()
-            sdk == android.os.Build.VERSION_CODES.R -> Android11Handler()
-            sdk >= android.os.Build.VERSION_CODES.S -> Android12Handler()
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> Android10Handler(context)
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.R -> Android11Handler()
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> Android12Handler()
             else -> Android9Handler(context, executor)
         }
     }
