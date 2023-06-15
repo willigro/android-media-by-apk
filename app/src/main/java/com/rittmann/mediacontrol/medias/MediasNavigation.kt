@@ -4,7 +4,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.rittmann.core.android.Storage
-import com.rittmann.core.android.StorageUri
+import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import com.rittmann.mediacontrol.create.CreateMediaScreenArguments
 import com.rittmann.mediacontrol.create.CreateMediaScreenRoot
@@ -30,6 +30,7 @@ fun NavGraphBuilder.mediaGraph(navController: NavController) {
             StorageUri(
                 uri = uri.replace("*", "/"),
                 storage = Storage.values().first { it.value == storage },
+                mediaId = mediaId?.toLongOrNull(),
             )
         }
 

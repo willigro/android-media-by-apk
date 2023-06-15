@@ -135,7 +135,7 @@ fun MediasList(
     modifier: Modifier,
     navController: NavController,
     uiState: MediasUiState,
-    loadBitmapFor: (media: Image) -> Bitmap,
+    loadBitmapFor: (media: Image) -> Bitmap?,
 ) {
     val list = uiState.mediaList.collectAsState().value
 
@@ -162,34 +162,34 @@ fun MediasList(
                         )
                     }
             ) {
-                val (image, name) = createRefs()
+                loadBitmapFor(media)?.also { bitmap ->
+                    val (image, name) = createRefs()
 
-                val bitmap = loadBitmapFor(media)
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .constrainAs(image) {
+                                top.linkTo(parent.top)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                            },
+                    )
 
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .constrainAs(image) {
-                            top.linkTo(parent.top)
-                            start.linkTo(parent.start)
-                            end.linkTo(parent.end)
-                        },
-                )
-
-                MediaTextBodySmall(
-                    text = media.name,
-                    modifier = Modifier
-                        .constrainAs(name) {
-                            bottom.linkTo(image.bottom)
-                            start.linkTo(parent.start)
-                            end.linkTo(parent.end)
-                        }
-                        .padding(AppTheme.dimensions.mediaScreenDimens.thumbnailNamePadding),
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                    MediaTextBodySmall(
+                        text = media.name,
+                        modifier = Modifier
+                            .constrainAs(name) {
+                                bottom.linkTo(image.bottom)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                            }
+                            .padding(AppTheme.dimensions.mediaScreenDimens.thumbnailNamePadding),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

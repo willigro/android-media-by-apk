@@ -48,7 +48,7 @@ import com.rittmann.components.ui.MediaTextBodySmall
 import com.rittmann.components.ui.SimpleTextField
 import com.rittmann.components.ui.linkToSides
 import com.rittmann.core.android.Storage
-import com.rittmann.core.android.StorageUri
+import com.rittmann.core.data.StorageUri
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
 import com.rittmann.core.extensions.applyRandomFilter
@@ -56,7 +56,6 @@ import com.rittmann.core.extensions.getCameraProvider
 import com.rittmann.core.extensions.toBitmapExif
 import com.rittmann.core.tracker.track
 import kotlinx.coroutines.flow.StateFlow
-
 
 data class CreateMediaScreenArguments(
     val storageUri: StorageUri? = null,

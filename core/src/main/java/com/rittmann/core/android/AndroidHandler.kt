@@ -8,6 +8,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
+import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -28,21 +29,21 @@ interface AndroidHandler {
     fun version(): AndroidVersion = AndroidVersion.ANDROID_9
 
     // TODO make all implement it
-    fun loadInternalMedia() {}
-    fun loadExternalMedia() {}
 
     fun registerPermissions(componentActivity: ComponentActivity)
     fun requestPermissions(permissionStatusResult: PermissionStatusResult)
     fun requestStoragePermissions()
     fun requestCameraPermissions()
+    fun loadInternalMedia() {}
+    fun loadExternalMedia() {}
     fun loadMedia(storageUri: StorageUri, mediaId: Long?)
-    fun loadThumbnail(media: Image): Bitmap
-    fun loadBitmap(media: Image): Bitmap
-    fun loadBitmapExif(media: Image): BitmapExif?
+    fun loadThumbnail(image: Image): Bitmap?
+    fun loadBitmap(image: Image): Bitmap?
+    fun loadBitmapExif(image: Image): BitmapExif?
     fun takePhoto(imageCapture: ImageCapture)
     fun savePicture(bitmapExif: BitmapExif, storage: Storage, name: String)
     fun updateImage(bitmapExif: BitmapExif, storageUri: StorageUri, mediaId: Long?, name: String)
-    fun deleteImage(media: Image)
+    fun deleteImage(image: Image)
     fun disposeCameraMembers()
 }
 
@@ -51,8 +52,8 @@ object AndroidHandlerFactory {
     fun create(context: Context, executor: ExecutorService): AndroidHandler {
         return when {
             Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> Android10Handler(context)
-            Build.VERSION.SDK_INT == Build.VERSION_CODES.R -> Android11Handler()
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> Android12Handler()
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.R -> Android11Handler(context)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> Android12Handler(context)
             else -> Android9Handler(context, executor)
         }
     }
@@ -88,7 +89,30 @@ enum class Storage(val value: String) {
     INTERNAL("0"), EXTERNAL("1")
 }
 
-data class StorageUri(
-    val uri: String,
-    val storage: Storage,
-)
+fun MutableStateFlow<List<Image>>.delete(image: Image) {
+    val list = this.value
+
+    val index = list.indexOfFirst { it.name == image.name }
+
+    if (index != -1) {
+        val arr = arrayListOf<Image>()
+        arr.addAll(list)
+        arr.removeAt(index)
+
+        this.value = arr
+    }
+}
+
+fun MutableStateFlow<List<Image>>.update(image: Image, predicate: (Image) -> Boolean) {
+    val list = this.value
+
+    val index = list.indexOfFirst(predicate)
+
+    if (index != -1) {
+        val arr = arrayListOf<Image>()
+        arr.addAll(list)
+        arr[index] = image
+
+        this.value = arr
+    }
+}
