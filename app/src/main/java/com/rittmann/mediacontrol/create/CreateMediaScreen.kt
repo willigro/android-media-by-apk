@@ -8,7 +8,6 @@ import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,15 +19,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -98,6 +94,7 @@ fun CreateMediaScreenRoot(
             deleteImage = createMediaViewModel::deleteImage,
             name = createMediaViewModel.name,
             setName = createMediaViewModel::setName,
+            navController = navController,
         )
 
         is CameraUiState.Saved, CameraUiState.Deleted -> {
@@ -218,10 +215,6 @@ fun TakenImage(
     setName: (String) -> Unit,
 ) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-        val showSaveButton = remember {
-            mutableStateOf(false)
-        }
-
         val bitmapExif = remember {
             mutableStateOf(uiState.image.image?.toBitmapExif())
         }
@@ -240,14 +233,12 @@ fun TakenImage(
                     height = Dimension.fillToConstraints
                     width = Dimension.fillToConstraints
                 }
-                .fillMaxWidth()
-                .background(Color.Red),
+                .fillMaxWidth(),
             contentAlignment = Alignment.TopCenter,
         ) {
             ImageContainer(
                 bitmap = bitmapExif.value?.bitmap,
                 takeAgain = takeAgain,
-                showSaveButton = showSaveButton,
             )
         }
 
@@ -257,8 +248,7 @@ fun TakenImage(
                 linkToSides()
             },
             takeAgain = takeAgain,
-            showSaveButton = showSaveButton,
-            bitmapExif = bitmapExif,
+            bitmapExifState = bitmapExif,
             saveImage = saveImage,
             name = name,
             setName = setName,
@@ -270,8 +260,7 @@ fun TakenImage(
 fun TakenImageOptions(
     modifier: Modifier,
     takeAgain: () -> Unit,
-    showSaveButton: MutableState<Boolean>,
-    bitmapExif: MutableState<BitmapExif?>,
+    bitmapExifState: MutableState<BitmapExif?>,
     saveImage: (BitmapExif, Storage) -> Unit,
     name: StateFlow<String>,
     setName: (String) -> Unit,
@@ -296,8 +285,8 @@ fun TakenImageOptions(
             IconButton(
                 modifier = Modifier.weight(AppTheme.floats.sameWeight),
                 onClick = {
-                    bitmapExif.value = bitmapExif.value?.copy(
-                        bitmap = bitmapExif.value?.bitmap?.applyRandomFilter()
+                    bitmapExifState.value = bitmapExifState.value?.copy(
+                        bitmap = bitmapExifState.value?.bitmap?.applyRandomFilter()
                     )
                 }
             ) {
@@ -310,11 +299,11 @@ fun TakenImageOptions(
                 }
             }
 
-            if (showSaveButton.value) {
+            bitmapExifState.value?.also { bitmapExif ->
                 IconButton(
                     modifier = Modifier.weight(AppTheme.floats.sameWeight),
                     onClick = {
-                        bitmapExif.value?.let { saveImage(it, Storage.INTERNAL) }
+                        saveImage(bitmapExif, Storage.INTERNAL)
                     }
                 ) {
                     Column(
@@ -329,7 +318,7 @@ fun TakenImageOptions(
                 IconButton(
                     modifier = Modifier.weight(AppTheme.floats.sameWeight),
                     onClick = {
-                        bitmapExif.value?.let { saveImage(it, Storage.EXTERNAL) }
+                        saveImage(bitmapExif, Storage.EXTERNAL)
                     }
                 ) {
                     Column(
@@ -339,6 +328,152 @@ fun TakenImageOptions(
 
                         MediaTextBodySmall(text = "External")
                     }
+                }
+            }
+        }
+
+        Column(modifier = Modifier.wrapContentSize()) {
+            ImageName(modifier = Modifier, name = name, setName = setName)
+
+            bitmapExifState.value?.exifInterface?.also { exifInterface ->
+                MediaTextBody(
+                    text = exifInterface.getAttribute(ExifInterface.TAG_DATETIME)
+                        .toString()
+                )
+                MediaTextBody(
+                    text = exifInterface.getAttribute(ExifInterface.TAG_ORIENTATION)
+                        .toString()
+                )
+                MediaTextBody(
+                    text = exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH)
+                        .toString()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun UpdateImage(
+    uiState: CameraUiState.UpdatingPicture,
+    loadBitmapExif: (media: Image) -> BitmapExif?,
+    updateImage: (BitmapExif) -> Unit,
+    deleteImage: (Image) -> Unit,
+    name: StateFlow<String>,
+    setName: (String) -> Unit,
+    navController: NavController,
+) {
+    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+        val bitmapExif = remember {
+            mutableStateOf(loadBitmapExif(uiState.image))
+        }
+
+        val (
+            containerImage,
+            optionsContainer,
+        ) = createRefs()
+
+        Box(
+            modifier = Modifier
+                .constrainAs(containerImage) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(optionsContainer.top)
+                    linkToSides()
+                    height = Dimension.fillToConstraints
+                    width = Dimension.fillToConstraints
+                }
+                .fillMaxWidth(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            if (bitmapExif.value?.bitmap != null) {
+                ImageContainer(
+                    bitmap = bitmapExif.value?.bitmap,
+                    takeAgain = {
+                        navController.popBackStack()
+                    },
+                )
+                Image(
+                    bitmap = bitmapExif.value?.bitmap!!.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        UpdateImageOptions(
+            modifier = Modifier.constrainAs(optionsContainer) {
+                bottom.linkTo(parent.bottom)
+                linkToSides()
+            },
+            uiState = uiState,
+            bitmapExif = bitmapExif,
+            updateImage = updateImage,
+            deleteImage = deleteImage,
+            name = name,
+            setName = setName,
+        )
+    }
+}
+
+@Composable
+fun UpdateImageOptions(
+    modifier: Modifier,
+    uiState: CameraUiState.UpdatingPicture,
+    bitmapExif: MutableState<BitmapExif?>,
+    updateImage: (BitmapExif) -> Unit,
+    deleteImage: (Image) -> Unit,
+    name: StateFlow<String>,
+    setName: (String) -> Unit,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+
+            IconButton(
+                modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                onClick = {
+                    bitmapExif.value = bitmapExif.value?.copy(
+                        bitmap = bitmapExif.value?.bitmap?.applyRandomFilter()
+                    )
+                }
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(imageVector = MediaIcons.Add, contentDescription = null)
+
+                    MediaTextBodySmall(text = "Filter")
+                }
+            }
+
+            IconButton(
+                modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                onClick = {
+                    bitmapExif.value?.let { updateImage(it) }
+                }
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(imageVector = MediaIcons.ArrowDownward, contentDescription = null)
+
+                    MediaTextBodySmall(text = "Save")
+                }
+            }
+
+            IconButton(
+                modifier = Modifier.weight(AppTheme.floats.sameWeight),
+                onClick = {
+                    deleteImage(uiState.image)
+                }
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(imageVector = MediaIcons.Delete, contentDescription = null)
+
+                    MediaTextBodySmall(text = "Delete")
                 }
             }
         }
@@ -365,127 +500,13 @@ fun TakenImageOptions(
 }
 
 @Composable
-fun UpdateImage(
-    uiState: CameraUiState.UpdatingPicture,
-    loadBitmapExif: (media: Image) -> BitmapExif?,
-    updateImage: (BitmapExif) -> Unit,
-    deleteImage: (Image) -> Unit,
-    name: StateFlow<String>,
-    setName: (String) -> Unit,
-) {
-    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-        var bitmapExif by remember {
-            mutableStateOf(loadBitmapExif(uiState.image))
-        }
-
-        val (
-            containerImage,
-            infoContainer,
-            buttonSave,
-        ) = createRefs()
-
-        val middleGuideline = createGuidelineFromTop(0.5f)
-
-        Box(
-            contentAlignment = Alignment.BottomCenter,
-            modifier = Modifier.constrainAs(containerImage) {
-                top.linkTo(parent.top)
-                bottom.linkTo(middleGuideline)
-                linkToSides()
-                height = Dimension.fillToConstraints
-            }
-        ) {
-            if (bitmapExif?.bitmap != null) {
-                Image(
-                    bitmap = bitmapExif?.bitmap!!.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .constrainAs(infoContainer) {
-                    top.linkTo(containerImage.bottom)
-                    bottom.linkTo(buttonSave.top)
-                    linkToSides()
-                    height = Dimension.fillToConstraints
-                }
-        ) {
-            Column(modifier = Modifier.wrapContentSize()) {
-                Button(
-                    onClick = {
-                        bitmapExif = bitmapExif?.copy(
-                            bitmap = bitmapExif?.bitmap?.applyRandomFilter()
-                        )
-                    }
-                ) {
-                    MediaTextBody(text = "Apply filter")
-                }
-
-                ImageName(modifier = Modifier, name = name, setName = setName)
-
-                bitmapExif?.exifInterface?.also { exifInterface ->
-                    MediaTextBody(
-                        text = exifInterface.getAttribute(ExifInterface.TAG_DATETIME).toString()
-                    )
-                    MediaTextBody(
-                        text = exifInterface.getAttribute(ExifInterface.TAG_ORIENTATION).toString()
-                    )
-                    MediaTextBody(
-                        text = exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH).toString()
-                    )
-                }
-            }
-        }
-
-        Box(
-            modifier = Modifier.constrainAs(buttonSave) {
-                bottom.linkTo(parent.bottom)
-                linkToSides()
-            }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = AppTheme.dimensions.paddingTopBetweenComponentsMedium),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    modifier = Modifier.weight(AppTheme.floats.sameWeight),
-                    onClick = {
-                        bitmapExif?.let { updateImage(it) }
-                    }
-                ) {
-                    MediaTextBody(text = "Save")
-                }
-
-                Button(
-                    modifier = Modifier.weight(AppTheme.floats.sameWeight),
-                    onClick = {
-                        deleteImage(uiState.image)
-                    }
-                ) {
-                    MediaTextBody(text = "Delete")
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun ImageContainer(
     bitmap: Bitmap?,
     takeAgain: () -> Unit,
-    showSaveButton: MutableState<Boolean>,
 ) {
     if (bitmap == null) {
         takeAgain()
     } else {
-        showSaveButton.value = true
-
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = null,
