@@ -34,7 +34,7 @@ open class CentralHandler(
 
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_10
     override fun registerPermissions(componentActivity: ComponentActivity) {
-        TODO("Not yet implemented")
+
     }
 
     override fun requestPermissions(permissionStatusResult: PermissionStatusResult) {

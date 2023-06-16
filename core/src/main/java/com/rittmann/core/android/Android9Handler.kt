@@ -21,7 +21,6 @@ import androidx.exifinterface.media.ExifInterface
 import com.rittmann.core.camera.CameraHandler
 import com.rittmann.core.data.BitmapExif
 import com.rittmann.core.data.Image
-import com.rittmann.core.data.ImageBitmapExif
 import com.rittmann.core.data.StorageUri
 import com.rittmann.core.exif.Exif
 import com.rittmann.core.extensions.arePermissionsGranted
@@ -384,11 +383,11 @@ class Android9Handler(
             }
 
             Storage.EXTERNAL -> {
-                val mediaId = getMediaId(uri.path!!)
+                val id = getMediaId(uri.path!!)
 
                 val contentUri: Uri = ContentUris.withAppendedId(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    mediaId ?: 0L,
+                    id ?: 0L,
                 )
 
                 contentUri.path?.let {
@@ -402,11 +401,11 @@ class Android9Handler(
                             null
                         ) > 0
                     ) {
-                        deleteThumbnail(storageUri.mediaId, contentUri)
+                        deleteThumbnail(id, contentUri)
 
                         scanFileAndNotifySavedImage(
                             file = newFile,
-                            mediaId = storageUri.mediaId,
+                            mediaId = id,
                         ) { image ->
                             if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
                                 mediaImageList.update(image) {

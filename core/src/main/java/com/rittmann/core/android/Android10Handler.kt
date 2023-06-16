@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -18,6 +19,7 @@ import com.rittmann.core.tracker.track
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+
 
 @RequiresApi(Build.VERSION_CODES.Q)
 class Android10Handler(
@@ -34,13 +36,25 @@ class Android10Handler(
         // TODO: mocking, remove me later
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val fileName = saveToInternalStorage(
+                    BitmapFactory.decodeResource(context.resources, R.drawable.untitled)
+                )
                 track(
                     "mocking bitmap=${
-                        saveToInternalStorage(
-                            BitmapFactory.decodeResource(context.resources, R.drawable.untitled)
-                        )
+                        fileName
                     }"
                 )
+
+                fileName?.also {
+                    val bitmap = ThumbnailUtils.createImageThumbnail(
+                        File(fileName),
+                        Size(120, 120),
+                        null,
+                    )
+
+                    track(bitmap)
+                }
+
             } else {
                 track("Cannot mock bitmap")
             }
@@ -85,11 +99,9 @@ class Android10Handler(
     override fun version(): AndroidVersion = AndroidVersion.ANDROID_10
 
     override fun loadThumbnail(image: Image): Bitmap {
-        track(image)
-
-        return context.contentResolver.loadThumbnail(
-            image.uri,
-            Size(100, 100),
+        return ThumbnailUtils.createImageThumbnail(
+            File(image.uri.path!!),
+            Size(200, 300),
             null,
         )
     }
@@ -145,6 +157,6 @@ class Android10Handler(
                 e.printStackTrace()
             }
         }
-        return directory.absolutePath
+        return myPath.absolutePath
     }
 }
