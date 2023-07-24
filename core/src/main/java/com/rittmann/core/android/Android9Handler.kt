@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
-import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -46,8 +45,6 @@ class Android9Handler(
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
         )
         private const val PERMISSIONS_CAMERA = Manifest.permission.CAMERA
-
-        const val INTERNAL_DIRECTORY = "imageDir"
     }
 
     private var activityResultLauncherPermissions: ActivityResultLauncher<Array<String>>? = null
@@ -280,60 +277,11 @@ class Android9Handler(
 
         when (storage) {
             Storage.INTERNAL -> {
-                val image = Image(
-                    uri = Uri.fromFile(file),
-                    name = file.name,
-                    id = null,
-                    storage = storage,
-                )
-
-                if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
-                    mediaImageList.value += image
-                }
-
-                imageSaved.tryEmit(image)
+                notifySavedInternalImage(file, storage)
             }
 
             Storage.EXTERNAL -> {
-                scanFileAndNotifySavedImage(
-                    file = file,
-                    mediaId = null,
-                ) { image ->
-                    if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
-                        mediaImageList.value += image
-                    }
-
-                    imageSaved.tryEmit(image)
-                }
-            }
-        }
-    }
-
-    private fun getMediaId(data: String): Long? {
-        val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-
-        val projection = arrayOf(
-            MediaStore.Images.Media._ID,
-        )
-
-        val selection = "${MediaStore.Images.Media.DATA} = ?"
-        val selectionArgs = arrayOf(data)
-
-        val query = context.contentResolver.query(
-            collection,
-            projection,
-            selection,
-            selectionArgs,
-            null,
-        )
-
-        return query?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-
-            if (cursor.moveToFirst()) {
-                cursor.getLong(idColumn)
-            } else {
-                null
+                notifySavedExternalImage(file)
             }
         }
     }
@@ -461,24 +409,6 @@ class Android9Handler(
         }
     }
 
-    private fun scanFileAndNotifySavedImage(file: File, mediaId: Long?, scanned: (Image) -> Unit) {
-        MediaScannerConnection.scanFile(
-            context,
-            arrayOf(file.toString()),
-            null
-        ) { path, uri ->
-            track("path=$path, uri=$uri")
-            Image(
-                uri = uri,
-                name = file.name,
-                id = mediaId ?: getMediaId(path.orEmpty()),
-                storage = Storage.EXTERNAL,
-            ).apply {
-                scanned(this)
-            }
-        }
-    }
-
     private fun deleteThumbnail(mediaId: Long?, contentUri: Uri) {
         track("data=$mediaId, contentUri=$contentUri")
 
@@ -525,17 +455,6 @@ class Android9Handler(
             e.printStackTrace()
             null
         }
-    }
-
-    private fun generateInternalFileToSave(name: String): File {
-        val cw = ContextWrapper(context)
-
-        val directory = cw.getDir(INTERNAL_DIRECTORY, Context.MODE_PRIVATE)
-
-        return File(
-            directory,
-            generateFileName(name),
-        )
     }
 
     private fun generateExternalFileToSave(name: String): File {

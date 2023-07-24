@@ -1,8 +1,10 @@
 package com.rittmann.core.android
 
 import android.content.Context
+import android.content.ContextWrapper
 import android.database.Cursor
 import android.graphics.Bitmap
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.activity.ComponentActivity
@@ -13,6 +15,8 @@ import com.rittmann.core.data.Image
 import com.rittmann.core.data.StorageUri
 import com.rittmann.core.tracker.track
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +24,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 open class CentralHandler(
     protected val context: Context
 ) : AndroidHandler {
+
+    companion object {
+        const val INTERNAL_DIRECTORY = "imageDir"
+        const val EXTERNAL_DIRECTORY_APP_PATH = "imageDir"
+    }
 
     override val permissionStatusResult: ConflatedEventBus<PermissionStatusResult> =
         ConflatedEventBus(PermissionStatusResult())
@@ -154,5 +163,122 @@ open class CentralHandler(
         } finally {
             cursor?.close()
         }
+    }
+
+    protected fun generateInternalFileToSave(name: String): File {
+        val cw = ContextWrapper(context)
+
+        val directory = cw.getDir(INTERNAL_DIRECTORY, Context.MODE_PRIVATE)
+
+        return File(
+            directory,
+            generateFileName(name),
+        )
+    }
+
+    protected fun scanFileAndNotifySavedImage(
+        file: File,
+        mediaId: Long?,
+        scanned: (Image) -> Unit
+    ) {
+        MediaScannerConnection.scanFile(
+            context,
+            arrayOf(file.toString()),
+            null
+        ) { path, uri ->
+            track("path=$path, uri=$uri")
+            Image(
+                uri = uri,
+                name = file.name,
+                id = mediaId ?: getMediaId(path.orEmpty()),
+                storage = Storage.EXTERNAL,
+            ).apply {
+                scanned(this)
+            }
+        }
+    }
+
+    protected fun getMediaId(data: String): Long? {
+        val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+        )
+
+        val selection = "${MediaStore.Images.Media.DATA} = ?"
+        val selectionArgs = arrayOf(data)
+
+        val query = context.contentResolver.query(
+            collection,
+            projection,
+            selection,
+            selectionArgs,
+            null,
+        )
+
+        return query?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+
+            if (cursor.moveToFirst()) {
+                cursor.getLong(idColumn)
+            } else {
+                null
+            }
+        }
+    }
+
+    protected fun notifySavedExternalImage(file: File) {
+        scanFileAndNotifySavedImage(
+            file = file,
+            mediaId = null,
+        ) { image ->
+            if (lastExecution == QueueExecution.RETRIEVE_EXTERNAL_MEDIA) {
+                mediaImageList.value += image
+            }
+
+            imageSaved.tryEmit(image)
+        }
+    }
+
+    protected fun notifySavedInternalImage(file: File, storage: Storage) {
+        val image = Image(
+            uri = Uri.fromFile(file),
+            name = file.name,
+            id = null,
+            storage = storage,
+        )
+
+        if (lastExecution == QueueExecution.RETRIEVE_INTERNAL_MEDIA) {
+            mediaImageList.value += image
+        }
+
+        imageSaved.tryEmit(image)
+    }
+
+    // TODO maybe I need to remove it
+    protected fun saveToInternalStorage(bitmapImage: Bitmap): String? {
+        val cw = ContextWrapper(context)
+
+        val directory: File = cw.getDir(INTERNAL_DIRECTORY, Context.MODE_PRIVATE)
+
+        val myPath = File(directory, "profile.jpg")
+
+        var fos: FileOutputStream? = null
+        try {
+            fos = FileOutputStream(myPath)
+
+            bitmapImage.compress(Bitmap.CompressFormat.JPEG, 100, fos)
+        } catch (e: Exception) {
+            track(e)
+            e.printStackTrace()
+        } finally {
+            try {
+                fos!!.close()
+            } catch (e: IOException) {
+                track(e)
+                e.printStackTrace()
+            }
+        }
+        return myPath.absolutePath
     }
 }

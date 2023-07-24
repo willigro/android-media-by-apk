@@ -51,7 +51,7 @@ object AndroidHandlerFactory {
 
     fun create(context: Context, executor: ExecutorService): AndroidHandler {
         return when {
-            Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> Android10Handler(context)
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> Android10Handler(context, executor)
             Build.VERSION.SDK_INT == Build.VERSION_CODES.R -> Android11Handler(context)
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> Android12Handler(context)
             else -> Android9Handler(context, executor)
